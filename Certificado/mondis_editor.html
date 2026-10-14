@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Editor Certificado MONDIS – IC-CTE-F421</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -1082,54 +1083,186 @@ function exportarExcel() {
   const wb = XLSX.utils.book_new();
   const p  = getParams();
 
-  // Hoja 1: Cabecera + parámetros
-  const cab = [
-    ["MANTENIMIENTO PREVENTIVO MONDIS", "", "", "", "", "", "", "IC-CTE-F421"],
-    ["", "", "", "", "", "", "Versión:", document.getElementById('version').value],
-    ["", "", "", "", "", "", "Vigencia:", document.getElementById('vigencia').value],
-    ["Equipo:", document.getElementById('equipo').value, "", "Modelo:", document.getElementById('modelo').value,
-     "", "Edificio:", document.getElementById('edificio').value],
-    ["", "", "", "", "", "", "Sector:", document.getElementById('sector').value],
-    ["", "", "", "", "", "", "Ubicación:", document.getElementById('ubicacion').value],
-    ["N° serie:", document.getElementById('nserie').value, "", "Marca:", document.getElementById('marca').value,
-     "", "Fecha:", document.getElementById('fecha').value],
-    ["", "", "", "", "", "", "Orden M:", document.getElementById('orden').value],
-    ["", "", "", "", "", "", "Realizó:", document.getElementById('realizo').value],
-    ["Instrumental utilizado", "", "Marca", "Modelo", "N° de serie", "", "Fecha Últ. Calibración", ""],
-    [document.getElementById('instr-tipo').value, "",
-     document.getElementById('instr-marca').value,
-     document.getElementById('instr-modelo').value,
-     document.getElementById('instr-serie').value, "",
-     document.getElementById('instr-fecha').value, ""],
-    [],
-    ["ESTADO DE VALORACIÓN"],
-    ["Inspección superada, el equipo es apto para el uso", document.getElementById('val1').value],
-    ["El equipo ha necesitado reparación", document.getElementById('val2').value],
-    ["El equipo no está reparado. No se puede usar", document.getElementById('val3').value],
-    ["Comentarios: " + document.getElementById('comentarios').value, document.getElementById('val4').value],
-    [],
-    ["8.1 - TEST DE INSPECCIÓN Y FUNCIONALIDAD"],
-    ["8.1.1 Sensores", document.getElementById('t811').value],
-    ["8.1.2 Ubicación de los sensores", document.getElementById('t812').value],
-    ["8.1.3 Vainas de sensores", document.getElementById('t813').value],
-    ["8.1.4 Cables UTP", document.getElementById('t814').value],
-    ["8.1.5 Interfaces LAN", document.getElementById('t815').value],
-    ["8.1.6 Fuentes de alimentación", document.getElementById('t816').value],
-    [],
-    ["8.2.1 - PARÁMETROS TERMÓMETRO PATRÓN"],
-    ["Up (Hasta -70°C)", p.Up_cryo, "°C", "Error permitido:", p.Up_cryo],
-    ["Up (-20…10°C)", p.Up_frio, "°C"],
-    ["Up (29°C)", p.Up_amb, "°C"],
-    ["Resolución (rp)", p.rp, "°C"],
-    ["8.2.2 - PARÁMETROS TERMÓMETRO A CALIBRAR"],
-    ["Error permitido", p.ep_cal, "°C"],
-    ["Resolución (rx)", p.rx, "°C"],
-    [],
-    // Header sensores
-    ["Ubicación Sensor","Sensor","S-M1","S-M2","S-M3","P-M1","P-M2","P-M3",
-     "Paso/Fallo","Uc (Incert. expand.)","ES (Error sist.)","ETtx (Error total)","Corrección","Observaciones"],
-  ];
+  // ── Helpers de estilo ──────────────────────────────────────────────────────
+  const borde = {
+    top:    { style: 'thin', color: { rgb: '888888' } },
+    bottom: { style: 'thin', color: { rgb: '888888' } },
+    left:   { style: 'thin', color: { rgb: '888888' } },
+    right:  { style: 'thin', color: { rgb: '888888' } },
+  };
+  const bordeGrueso = {
+    top:    { style: 'medium', color: { rgb: '444444' } },
+    bottom: { style: 'medium', color: { rgb: '444444' } },
+    left:   { style: 'medium', color: { rgb: '444444' } },
+    right:  { style: 'medium', color: { rgb: '444444' } },
+  };
 
+  const estiloTitulo = {
+    font:      { bold: true, sz: 14, color: { rgb: '1A3A5C' } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    fill:      { fgColor: { rgb: 'EEF3FA' } },
+    border:    bordeGrueso,
+  };
+  const estiloHeaderVerde = {
+    font:      { bold: true, sz: 10, color: { rgb: 'FFFFFF' } },
+    fill:      { fgColor: { rgb: '1A3A5C' } },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+    border:    borde,
+  };
+  const estiloHeaderVerde2 = {
+    font:      { bold: true, sz: 10, color: { rgb: 'FFFFFF' } },
+    fill:      { fgColor: { rgb: '0D7A3E' } },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+    border:    borde,
+  };
+  const estiloAmarillo = {
+    font:      { sz: 10 },
+    fill:      { fgColor: { rgb: 'FEFCE8' } },
+    border:    borde,
+    alignment: { vertical: 'center' },
+  };
+  const estiloGris = {
+    font:      { bold: true, sz: 10, color: { rgb: '4A5568' } },
+    fill:      { fgColor: { rgb: 'EEF1F5' } },
+    border:    borde,
+    alignment: { vertical: 'center' },
+  };
+  const estiloAzulClaro = {
+    font:      { sz: 10, color: { rgb: '1A3A5C' } },
+    fill:      { fgColor: { rgb: 'D6E4F0' } },
+    border:    borde,
+    alignment: { vertical: 'center', wrapText: true },
+  };
+  const estiloNormal = {
+    font:      { sz: 10 },
+    border:    borde,
+    alignment: { vertical: 'center' },
+  };
+  const estiloPaso = {
+    font:      { bold: true, sz: 10, color: { rgb: '1A7A3C' } },
+    fill:      { fgColor: { rgb: 'E6F4EC' } },
+    border:    borde,
+    alignment: { horizontal: 'center', vertical: 'center' },
+  };
+  const estiloFallo = {
+    font:      { bold: true, sz: 10, color: { rgb: 'C0392B' } },
+    fill:      { fgColor: { rgb: 'FDECEA' } },
+    border:    borde,
+    alignment: { horizontal: 'center', vertical: 'center' },
+  };
+  const estiloCalc = {
+    font:      { sz: 10, color: { rgb: '1A3A5C' } },
+    fill:      { fgColor: { rgb: 'EBF3FF' } },
+    border:    borde,
+    alignment: { horizontal: 'right', vertical: 'center' },
+    numFmt:    '0.000000',
+  };
+  const estiloNum = {
+    font:      { sz: 10 },
+    border:    borde,
+    alignment: { horizontal: 'right', vertical: 'center' },
+  };
+
+  // ── Datos ──────────────────────────────────────────────────────────────────
+  const rows = [];
+  const styles = [];  // styles[r][c] = estilo
+
+  function addRow(cells, estilos) {
+    rows.push(cells);
+    styles.push(estilos || cells.map(() => estiloNormal));
+  }
+
+  const v = (id) => { const e = document.getElementById(id); return e ? e.value : ''; };
+
+  // Fila 1: Título + código
+  addRow(
+    ['MANTENIMIENTO PREVENTIVO MONDIS','','','','','','IC-CTE-F421',''],
+    [estiloTitulo,estiloTitulo,estiloTitulo,estiloTitulo,estiloTitulo,estiloTitulo,
+     {...estiloGris, alignment:{horizontal:'center',vertical:'center'}}, estiloNormal]
+  );
+  // Fila 2
+  addRow(['','','','','','','Versión: '+v('version'),''],
+    [estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloGris,estiloNormal]);
+  // Fila 3
+  addRow(['','','','','','','Vigencia: '+v('vigencia'),''],
+    [estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloGris,estiloNormal]);
+  // Equipo / Edificio
+  addRow(['Equipo: '+v('equipo'),'','','Modelo: '+v('modelo'),'','','Edificio:',v('edificio')],
+    [estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloGris,estiloNormal]);
+  addRow(['','','','','','','Sector:',v('sector')],
+    [estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloGris,estiloNormal]);
+  addRow(['','','','','','','Ubicación:',v('ubicacion')],
+    [estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloGris,estiloNormal]);
+  addRow(['N° serie: '+v('nserie'),'','','Marca: '+v('marca'),'','','Fecha:',v('fecha')],
+    [estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloGris,estiloNormal]);
+  addRow(['','','','','','','Orden M:',v('orden')],
+    [estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloGris,estiloNormal]);
+  addRow(['','','','','','','Realizó:',v('realizo')],
+    [estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloGris,{...estiloNormal,font:{bold:true,sz:10}}]);
+  // Instrumental
+  addRow(['Instrumental utilizado','','Marca','Modelo','N° de serie','','Fecha Últ. Calibración',''],
+    [estiloHeaderVerde,estiloHeaderVerde,estiloHeaderVerde,estiloHeaderVerde,estiloHeaderVerde,estiloHeaderVerde,estiloHeaderVerde,estiloHeaderVerde]);
+  addRow([v('instr-tipo'),'',v('instr-marca'),v('instr-modelo'),v('instr-serie'),'',v('instr-fecha'),''],
+    [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+
+  // Espacio
+  addRow(['','','','','','','',''], [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+
+  // Estado de valoración
+  addRow(['Estado de valoración','','','','','','',''],
+    [estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2]);
+  addRow(['Inspección superada, el equipo es apto para el uso','','','','','','Estado',v('val1')],
+    [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloGris,estiloPaso]);
+  addRow(['El equipo ha necesitado reparación','','','','','','Estado',v('val2')],
+    [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloGris,estiloGris]);
+  addRow(['El equipo no está reparado. No se puede usar','','','','','','Estado',v('val3')],
+    [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloGris,estiloGris]);
+  addRow(['Comentarios: '+v('comentarios'),'','','','','','Estado',v('val4')],
+    [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloGris,estiloGris]);
+
+  addRow(['','','','','','','',''], [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+
+  // 8.1
+  addRow(['8.1','Test de Inspección y Funcionalidad','','','','','',''],
+    [estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2]);
+  [['8.1.1','Sensores','t811'],['8.1.2','Ubicación de los sensores','t812'],
+   ['8.1.3','Vainas de sensores','t813'],['8.1.4','Cables UTP','t814'],
+   ['8.1.5','Interfaces LAN','t815'],['8.1.6','Fuentes de alimentación','t816']
+  ].forEach(([num,desc,id]) => {
+    const val = v(id);
+    addRow([num,desc,'','','','','',val],
+      [estiloGris,estiloAzulClaro,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,
+       val==='P'?estiloPaso:val==='F'?estiloFallo:estiloGris]);
+  });
+
+  addRow(['','','','','','','',''], [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+
+  // 8.2.1
+  addRow(['8.2.1','Características del termómetro patrón','','','','','',''],
+    [estiloGris,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2]);
+  addRow(['','Incertidumbre (Up) Hasta -70°C',p.Up_cryo,'°C','','Error permitido:',p.ep_cal,'°C'],
+    [estiloNormal,estiloAzulClaro,estiloNum,estiloGris,estiloNormal,estiloGris,estiloNum,estiloGris]);
+  addRow(['','Incertidumbre (Up) -20…10°C',p.Up_frio,'°C','','','',''],
+    [estiloNormal,estiloAzulClaro,estiloNum,estiloGris,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+  addRow(['','Incertidumbre (Up) 29°C',p.Up_amb,'°C','','','',''],
+    [estiloNormal,estiloAzulClaro,estiloNum,estiloGris,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+  addRow(['','Resolución (rp)',p.rp,'°C','','','',''],
+    [estiloNormal,estiloAzulClaro,estiloNum,estiloGris,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+  addRow(['8.2.2','Características del termómetro a calibrar','','','','','',''],
+    [estiloGris,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2]);
+  addRow(['','Error permitido',p.ep_cal,'°C','','','',''],
+    [estiloNormal,estiloAzulClaro,estiloNum,estiloGris,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+  addRow(['','Resolución (rx)',p.rx,'°C','','','',''],
+    [estiloNormal,estiloAzulClaro,estiloNum,estiloGris,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+
+  addRow(['','','','','','','',''], [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+
+  // Header tabla sensores (14 columnas)
+  const hdrS = Array(14).fill(estiloHeaderVerde);
+  addRow(['Ubicación / Piso','Sensor ID','S-M1','S-M2','S-M3','P-M1','P-M2','P-M3',
+          'Paso/Fallo','Uc','ES','ETtx','Correc.','Observaciones'], hdrS);
+
+  // Filas de sensores
   sensorData.forEach((d, idx) => {
     const sm1 = parseFloat(document.getElementById(`sm${idx}_1`)?.value)||null;
     const sm2 = parseFloat(document.getElementById(`sm${idx}_2`)?.value)||null;
@@ -1139,18 +1272,23 @@ function exportarExcel() {
     const pm3 = parseFloat(document.getElementById(`pm${idx}_3`)?.value)||null;
     const sm = [sm1,sm2,sm3], pm = [pm1,pm2,pm3];
     const promS = avg(sm.filter(v=>v!==null&&!isNaN(v)));
-    const Up  = selectUp(promS, p);
-    const Uc  = calcUc(sm, pm, Up, p.rp, p.rx);
-    const ES  = calcES(sm, pm);
-    const ETtx= calcETtx(Uc, ES);
-    const Corr= calcCorr(sm, pm);
-    const pf  = calcPasoFallo(sm, pm, p.ep_cal);
-    const loc = document.getElementById(`loc${idx}`)?.value || d.loc;
-    const piso= document.getElementById(`piso${idx}`)?.value || d.piso;
-    const obs = document.getElementById(`obs${idx}`)?.value || d.obs;
+    const Up   = selectUp(promS, p);
+    const Uc   = calcUc(sm, pm, Up, p.rp, p.rx);
+    const ES   = calcES(sm, pm);
+    const ETtx = calcETtx(Uc, ES);
+    const Corr = calcCorr(sm, pm);
+    const pf   = calcPasoFallo(sm, pm, p.ep_cal);
+    const loc    = document.getElementById(`loc${idx}`)?.value || d.loc;
+    const piso   = document.getElementById(`piso${idx}`)?.value || d.piso;
+    const obs    = document.getElementById(`obs${idx}`)?.value || d.obs;
     const sensor = document.getElementById(`sensor${idx}`)?.value || d.sensor;
+    const bgFila = idx % 2 === 0
+      ? { fgColor: { rgb: 'FFFFF0' } }
+      : { fgColor: { rgb: 'F5FFF5' } };
+    const estiloFila = { font:{sz:10}, fill:bgFila, border:borde, alignment:{vertical:'center'} };
+    const estiloFilaR = { font:{sz:10}, fill:bgFila, border:borde, alignment:{horizontal:'right',vertical:'center'} };
 
-    cab.push([
+    rows.push([
       `${loc} / ${piso}`, sensor,
       sm1, sm2, sm3, pm1, pm2, pm3,
       pf,
@@ -1160,15 +1298,39 @@ function exportarExcel() {
       isNaN(Corr)?'':+Corr.toFixed(6),
       obs
     ]);
+    styles.push([
+      estiloFila, estiloFila,
+      estiloFilaR, estiloFilaR, estiloFilaR,
+      estiloFilaR, estiloFilaR, estiloFilaR,
+      pf==='Paso' ? estiloPaso : estiloFallo,
+      estiloCalc, estiloCalc, estiloCalc, estiloCalc,
+      estiloFila
+    ]);
   });
 
-  const ws = XLSX.utils.aoa_to_sheet(cab);
-  // Ancho de columnas
+  // ── Armar hoja ────────────────────────────────────────────────────────────
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // Aplicar estilos celda por celda
+  const enc = XLSX.utils.encode_cell;
+  rows.forEach((row, r) => {
+    row.forEach((_, c) => {
+      const ref = enc({ r, c });
+      if (!ws[ref]) ws[ref] = { v: row[c], t: typeof row[c] === 'number' ? 'n' : 's' };
+      if (styles[r] && styles[r][c]) ws[ref].s = styles[r][c];
+    });
+  });
+
+  // Anchos de columna
   ws['!cols'] = [
-    {wch:25},{wch:20},{wch:8},{wch:8},{wch:8},{wch:8},{wch:8},{wch:8},
-    {wch:10},{wch:20},{wch:16},{wch:16},{wch:12},{wch:20}
+    {wch:22},{wch:20},{wch:8},{wch:8},{wch:8},
+    {wch:8},{wch:8},{wch:8},{wch:10},
+    {wch:14},{wch:12},{wch:12},{wch:12},{wch:22}
   ];
-  XLSX.utils.book_append_sheet(wb, ws, "Certificado MONDIS");
+  // Alto de fila para el título
+  ws['!rows'] = [{ hpt: 28 }];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Certificado MONDIS');
   const fecha = document.getElementById('fecha').value.replace(/-/g,'');
   XLSX.writeFile(wb, `CertMONDIS_${fecha||'export'}.xlsx`);
 }
