@@ -739,6 +739,7 @@ function saveDB() {
 function pushDB() {
   DB_PATH = getDBPath();
   if (!TOKEN || !REPO) return;
+  var ordenActual = document.getElementById('orden').value.trim() || '—';
   db = construirDB();
   setSyncStatus('busy', 'Guardando...');
   var content = btoa(unescape(encodeURIComponent(JSON.stringify(db, null, 2))));
@@ -752,7 +753,7 @@ function pushDB() {
     })
     .then(function(data) {
       dbSHA = data.content.sha;
-      setSyncStatus('ok', '✓ Guardado Orden ' + (document.getElementById('orden').value||'—') + ' — ' + hora());
+      setSyncStatus('ok', '✓ Guardado Orden ' + ordenActual + ' — ' + hora());
     })
     .catch(function(e) {
       setSyncStatus('err', 'Error al guardar');
