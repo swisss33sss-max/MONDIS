@@ -340,6 +340,10 @@
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
     Guardar
   </button>
+  <button class="tb-btn add" onclick="cargarPorOrden()" title="Cargar certificado por Orden M">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Cargar Orden
+  </button>
   <span id="syncStatus" class="sync-status">—</span>
   <button class="tb-btn reset" onclick="toggleCfg()">⚙ Config</button>
   <button class="tb-btn reset" onclick="resetConfirm()">↺ Resetear</button>
@@ -644,13 +648,22 @@
 // ═══════════════════════════════════════════════════════════════
 var REPO      = '';
 var TOKEN     = '';
-var DB_PATH   = 'db.json';
+var DB_PATH   = 'db.json'; // se recalcula por Orden M
 var BRANCH    = 'main';
 var dbSHA     = '';
 var db        = null;
 var saveTimer = null;
 var SAVE_DELAY = 1500;
 var CFG_KEY   = 'gh_mondis_cfg_v1';
+
+// Obtiene el DB_PATH según la Orden M actual
+function getDBPath() {
+  var orden = document.getElementById('orden').value.trim();
+  if (!orden) return 'certificados/SIN_ORDEN.json';
+  // Sanitizar: solo alfanuméricos, guiones y guiones bajos
+  var safe = orden.replace(/[^a-zA-Z0-9\-_\.]/g, '_');
+  return 'certificados/OrdenM_' + safe + '.json';
+}
 
 function guardarConfig() {
   TOKEN = document.getElementById('cfgToken').value.trim();
@@ -688,6 +701,8 @@ function apiHeaders() {
 }
 
 function cargarDB() {
+  DB_PATH = getDBPath();
+  dbSHA = ''; // resetear SHA al cambiar de archivo
   setSyncStatus('busy', 'Cargando...');
   var url = 'https://api.github.com/repos/' + REPO + '/contents/' + DB_PATH + '?ref=' + BRANCH + '&t=' + Date.now();
   fetch(url, { headers: apiHeaders() })
@@ -702,17 +717,16 @@ function cargarDB() {
       for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
       db = JSON.parse(new TextDecoder('utf-8').decode(bytes));
       cargarDesdeDB();
-      setSyncStatus('ok', 'Sincronizado ' + hora());
+      setSyncStatus('ok', '✓ Orden ' + (document.getElementById('orden').value||'—') + ' — ' + hora());
     })
     .catch(function(e) {
-      // Si no existe el archivo aún, arrancamos con datos por defecto
       if (e.message.includes('404')) {
         db = construirDB();
-        setSyncStatus('ok', 'Nuevo archivo — se creará al guardar');
+        setSyncStatus('ok', 'Nueva Orden — se creará al guardar');
         return;
       }
       setSyncStatus('err', 'Error al cargar: ' + e.message);
-      toast('Error al cargar db.json: ' + e.message, true);
+      toast('Error al cargar: ' + e.message, true);
     });
 }
 
@@ -723,6 +737,8 @@ function saveDB() {
 }
 
 function pushDB() {
+  DB_PATH = getDBPath();
+  if (!TOKEN || !REPO) return;
   db = construirDB();
   setSyncStatus('busy', 'Guardando...');
   var content = btoa(unescape(encodeURIComponent(JSON.stringify(db, null, 2))));
@@ -736,7 +752,7 @@ function pushDB() {
     })
     .then(function(data) {
       dbSHA = data.content.sha;
-      setSyncStatus('ok', 'Guardado ' + hora());
+      setSyncStatus('ok', '✓ Guardado Orden ' + (document.getElementById('orden').value||'—') + ' — ' + hora());
     })
     .catch(function(e) {
       setSyncStatus('err', 'Error al guardar');
@@ -848,6 +864,13 @@ function cargarDesdeDB() {
 }
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
+function cargarPorOrden() {
+  var orden = document.getElementById('orden').value.trim();
+  if (!orden) { toast('Ingresá primero el número de Orden M.', true); return; }
+  if (!TOKEN || !REPO) { toast('Conectate primero con tu token GitHub.', true); return; }
+  setSyncStatus('busy', 'Cargando Orden ' + orden + '...');
+  cargarDB();
+}
 function hora() {
   var d = new Date();
   return d.toLocaleDateString('es-AR') + ' ' + d.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
