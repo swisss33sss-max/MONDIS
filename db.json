@@ -1,0 +1,522 @@
+{
+  "cabecera": {
+    "version": "2",
+    "vigencia": "sept-24",
+    "equipo": "CEN-MON-LABCAT",
+    "modelo": "Mondis",
+    "edificio": "Catamarca 1242",
+    "sector": "Laboratorio",
+    "ubicacion": "Catamarca 1242 - 01 - 02 - 03",
+    "nserie": "VARIOS",
+    "marca": "DSNTEC",
+    "fecha": "2025-10-24",
+    "orden": "9251311",
+    "realizo": "Henry Salinas",
+    "instr_tipo": "Termómetro",
+    "instr_marca": "Madgetech",
+    "instr_modelo": "OctTemp2000",
+    "instr_serie": "P93230",
+    "instr_fecha": ""
+  },
+  "valoracion": {
+    "val1": "P",
+    "val2": "NA",
+    "val3": "NA",
+    "val4": "NA",
+    "comentarios": ""
+  },
+  "inspeccion": {
+    "t811": "P",
+    "t812": "P",
+    "t813": "P",
+    "t814": "NA",
+    "t815": "NA",
+    "t816": "NA"
+  },
+  "params": {
+    "Up_cryo": 0.18,
+    "Up_frio": 0.14,
+    "Up_amb": 0.11,
+    "rp": 0.01,
+    "ep_cal": 2,
+    "rx": 0.0625
+  },
+  "sensores": [
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "8C000005B3B69428",
+      "loc": "Freezer 1",
+      "piso": "Piso 1",
+      "sm": [
+        -16.19,
+        -16.2,
+        -16.2
+      ],
+      "pm": [
+        -16.2,
+        -16.6,
+        -16.29
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "A9000005683C5728",
+      "loc": "Freezer 2",
+      "piso": "Piso 1",
+      "sm": [
+        -18.1,
+        -18.2,
+        -18.1
+      ],
+      "pm": [
+        -16.75,
+        -15.25,
+        -16.8
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "30000005632D2828",
+      "loc": "Freezer 3",
+      "piso": "Piso 1",
+      "sm": [
+        -16.4,
+        -16.5,
+        -16.5
+      ],
+      "pm": [
+        -15.73,
+        -15.8,
+        -15.8
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "0D0000075F4A1F28",
+      "loc": "Freezer 4",
+      "piso": "Piso 1",
+      "sm": [
+        -19.5,
+        -19.6,
+        -19.6
+      ],
+      "pm": [
+        -17.73,
+        -17.73,
+        -17.8
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "BC000005B4261128",
+      "loc": "Freezer 5",
+      "piso": "Piso 1",
+      "sm": [
+        -13.8,
+        -14.6,
+        -14.7
+      ],
+      "pm": [
+        -13.84,
+        -15.83,
+        -15.3
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "680000056852A728",
+      "loc": "Freezer 6",
+      "piso": "Piso 1",
+      "sm": [
+        -12.7,
+        -12.1,
+        -13.3
+      ],
+      "pm": [
+        13.1,
+        -14.1,
+        -14.1
+      ],
+      "obs": "Revisar dato patrón M1"
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "7600000C7C702628",
+      "loc": "Freezer 7",
+      "piso": "Piso 1",
+      "sm": [
+        -17.1,
+        -17.3,
+        -17.1
+      ],
+      "pm": [
+        -17.29,
+        -16.85,
+        -16.85
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "0200000C79453D28",
+      "loc": "Heladera 1",
+      "piso": "Piso 1",
+      "sm": [
+        3.1,
+        2.9,
+        3
+      ],
+      "pm": [
+        3.74,
+        3.92,
+        3.92
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "1C00000C79DE9A28",
+      "loc": "Baño term. 26353",
+      "piso": "Piso 1",
+      "sm": [
+        35.4,
+        35.4,
+        35.4
+      ],
+      "pm": [
+        36.49,
+        36.47,
+        36.47
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "BF00080276274010",
+      "loc": "Estufa 27500",
+      "piso": "Piso 1",
+      "sm": [
+        35,
+        35,
+        35
+      ],
+      "pm": [
+        35.29,
+        35.26,
+        35.24
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "7900000567979E28",
+      "loc": "Ambiente",
+      "piso": "Piso 1",
+      "sm": [
+        20.4,
+        20.4,
+        20.4
+      ],
+      "pm": [
+        20.3,
+        20.3,
+        20.4
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "7500000568F5B828",
+      "loc": "Freezer 1",
+      "piso": "Piso 2",
+      "sm": [
+        -18.2,
+        -18.6,
+        -19
+      ],
+      "pm": [
+        -19.95,
+        -19.43,
+        -19.43
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "C500000568BF4128",
+      "loc": "Freezer 2",
+      "piso": "Piso 2",
+      "sm": [
+        -20.4,
+        -20.8,
+        -20.4
+      ],
+      "pm": [
+        -20.99,
+        -20.4,
+        -20.4
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "DC000007605B1928",
+      "loc": "Heladera 1",
+      "piso": "Piso 2",
+      "sm": [
+        2.06,
+        2.04,
+        2.01
+      ],
+      "pm": [
+        2.41,
+        2.8,
+        2.8
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "1400000567D05328",
+      "loc": "Heladera 2",
+      "piso": "Piso 2",
+      "sm": [
+        4.41,
+        4.08,
+        4.06
+      ],
+      "pm": [
+        4.28,
+        4.29,
+        4.3
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "F100000567B8FA28",
+      "loc": "Heladera 3",
+      "piso": "Piso 2",
+      "sm": [
+        4.61,
+        4.66,
+        4.68
+      ],
+      "pm": [
+        4.7,
+        4.8,
+        4.76
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "61000005A054B228",
+      "loc": "Heladera 4",
+      "piso": "Piso 2",
+      "sm": [
+        4,
+        3.7,
+        4.2
+      ],
+      "pm": [
+        3.5,
+        4.21,
+        4.21
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "3700000568630A28",
+      "loc": "Heladera 5",
+      "piso": "Piso 2",
+      "sm": [
+        5.2,
+        5.2,
+        5.3
+      ],
+      "pm": [
+        4.86,
+        5.36,
+        5.36
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "310001000033AA7E",
+      "loc": "Ambiente Humedad",
+      "piso": "Piso 2",
+      "sm": [
+        45.3,
+        45.3,
+        45.3
+      ],
+      "pm": [
+        45.3,
+        45.3,
+        45.2
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "D500080250F4D610",
+      "loc": "Ambiente 2C",
+      "piso": "Piso 2",
+      "sm": [
+        21.5,
+        21.5,
+        21.5
+      ],
+      "pm": [
+        21.12,
+        20.96,
+        20.96
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "7400000C7BB85628",
+      "loc": "Freezer 1",
+      "piso": "Piso 3",
+      "sm": [
+        -19.1,
+        -19.2,
+        -19.1
+      ],
+      "pm": [
+        -19.1,
+        -19.1,
+        -19.1
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "3A00000567D00328",
+      "loc": "Freezer 2",
+      "piso": "Piso 3",
+      "sm": [
+        -16.5,
+        -16.3,
+        -16.2
+      ],
+      "pm": [
+        -14.48,
+        -14.95,
+        -14.95
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "2F00080251061C10",
+      "loc": "Freezer 3",
+      "piso": "Piso 3",
+      "sm": [
+        -23.5,
+        -23.5,
+        -23.5
+      ],
+      "pm": [
+        -22.5,
+        -22.3,
+        -22.4
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "4F000005A0109028",
+      "loc": "Freezer 4",
+      "piso": "Piso 3",
+      "sm": [
+        -23.1,
+        -23.1,
+        -23.1
+      ],
+      "pm": [
+        -20.86,
+        -23.05,
+        -23.07
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "EE001000002E617E",
+      "loc": "CrioFreezer 4",
+      "piso": "Piso 3",
+      "sm": [
+        -72.9,
+        -73.3,
+        -73.3
+      ],
+      "pm": [
+        -71.2,
+        -71.5,
+        -71.1
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "740000056723BB28",
+      "loc": "Heladera 1",
+      "piso": "Piso 3",
+      "sm": [
+        4.4,
+        4.6,
+        4.6
+      ],
+      "pm": [
+        5.25,
+        5.66,
+        null
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "520000075F7FD628",
+      "loc": "Heladera 3",
+      "piso": "Piso 3",
+      "sm": [
+        4.9,
+        4.9,
+        4.9
+      ],
+      "pm": [
+        6.87,
+        4.95,
+        null
+      ],
+      "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "2900010000337E7E",
+      "loc": "Ambiente Humedad",
+      "piso": "Piso 3",
+      "sm": [
+        19.3,
+        19.3,
+        19.5
+      ],
+      "pm": [
+        19.3,
+        19.3,
+        19.4
+      ],
+      "obs": ""
+    }
+  ]
+}
