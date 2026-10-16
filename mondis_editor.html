@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editor Certificado MONDIS – IC-CTE-F421</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* ═══ Paleta REAL del MONDIS.xlsx (extraída de xl/styles.xml) ═══
+       Font default: Arial 10
+       - fill indexed=42 → #CCFFFF (cyan claro, campos cabecera y datos)
+       - fill indexed=22 → #C0C0C0 (gris, headers principales)
+       - fill indexed=43 → #CCFFCC (verde pastel, Estado valoración)
+       - fill rgb=FFCCFFCC → verde pastel (Paso)
+       - fill theme=0 tint=-0.25 → gris claro (headers Puntos de inspección)
+       - color indexed=62 → #000080 (azul navy para texto label)
+    */
+    --primary:       #000080;   /* azul navy — texto bold labels */
+    --primary-mid:   #000080;
+    --primary-light: #CCFFFF;   /* cyan claro — campos de la cabecera */
+    --title-bg:      #CCFFFF;   /* mismo fondo cyan */
+    --accent:        #CCFFCC;   /* verde pastel — Estado valoración + headers tablas */
+    --accent-light:  #CCFFCC;
+    --accent-mid:    #99CC99;   /* verde algo más oscuro para hover/borde */
+    --gold:          #808080;   /* ya no se usa; placeholder */
+    --yellow-bg:     #CCFFFF;   /* el XLSX usa CYAN, no amarillo */
+    --danger:        #FF0000;   /* rojo puro — "Fallo" */
+    --danger-light:  #FFCCCC;
+    --success:       #008000;   /* verde oscuro — "Paso" */
+    --success-light: #CCFFCC;
+    --calc-bg:       #FFFFFF;   /* resultados calculados: fondo blanco (XLSX no colorea) */
+    --row-alt-1:     #FFFFFF;   /* filas sensor: XLSX no las alterna, deja blanco */
+    --row-alt-2:     #F2F2F2;   /* nosotros alternamos muy suave para legibilidad */
+    --neutral-50:    #FAFAFA;
+    --neutral-100:   #C0C0C0;   /* GRIS clásico Excel — "hdr-gray" */
+    --neutral-200:   #000000;   /* bordes thin: XLSX usa negro (indexed=64) */
+    --neutral-400:   #808080;
+    --neutral-600:   #000000;   /* texto negro default */
+    --neutral-800:   #000000;
+    --border-thick:  #000000;   /* bordes medium: XLSX usa negro */
+    --white:         #FFFFFF;
+    --shadow-sm:     none;
+    --shadow-md:     none;
+    --shadow-lg:     0 2px 6px rgba(0,0,0,.12);
+    --radius:        0;
+    /* Fuente real del XLSX: Arial, size 10 (= ~13px) */
+    --font: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    font-size: 13px;                   /* Arial 10 en Excel ≈ 13px en pantalla */
+    background: #E5E5E5;               /* gris claro tipo fondo Excel */
+    min-height: 100vh;
+    color: #000;
+  }
+
+  /* ══ TOOLBAR ══════════════════════════════════════════════════════════════ */
+  #toolbar {
+    position: sticky; top: 0; z-index: 200;
+    background: var(--primary);        /* plano, sin gradiente */
+    color: #fff;
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 16px;
+    height: 46px;
+    box-shadow: var(--shadow-lg);
+    flex-wrap: wrap;
+  }
+  #toolbar-logo {
+    display: flex; align-items: center; gap: 10px; margin-right: auto;
+  }
+  #toolbar-logo .logo-icon {
+    width: 32px; height: 32px; background: rgba(255,255,255,.15);
+    border-radius: 8px; display: flex; align-items: center;
+    justify-content: center; font-size: 18px;
+  }
+  #toolbar-logo h2 {
+    font-size: 13px; font-weight: 600; letter-spacing: .3px;
+    line-height: 1.3;
+  }
+  #toolbar-logo span {
+    display: block; font-size: 10px; font-weight: 400;
+    opacity: .75; letter-spacing: .5px;
+  }
+  .tb-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border: none; border-radius: var(--radius);
+    font-family: var(--font); font-size: 11.5px; font-weight: 500;
+    cursor: pointer; transition: all .15s ease; white-space: nowrap;
+  }
+  .tb-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .tb-btn:active { transform: translateY(0); }
+  .tb-btn.excel  { background: #217346; color: #fff; }
+  .tb-btn.excel:hover  { background: #1a5c38; }
+  .tb-btn.pdf    { background: #b91c1c; color: #fff; }
+  .tb-btn.pdf:hover    { background: #991b1b; }
+  .tb-btn.add    { background: rgba(255,255,255,.18); color: #fff; border: 1px solid rgba(255,255,255,.3); }
+  .tb-btn.add:hover    { background: rgba(255,255,255,.28); }
+  .tb-btn.reset  { background: rgba(255,255,255,.1); color: rgba(255,255,255,.75); border: 1px solid rgba(255,255,255,.2); }
+  .tb-btn.reset:hover  { background: rgba(255,255,255,.18); color: #fff; }
+
+  /* ══ WRAPPER ══════════════════════════════════════════════════════════════ */
+  #cert-wrap { padding: 16px; }
+
+  #certificado {
+    background: var(--white);
+    width: 100%; max-width: 1400px;
+    margin: 0 auto;
+    border: 2px solid var(--border-thick);  /* "medium" border XLSX */
+    border-radius: 0;                       /* Excel es plano */
+    box-shadow: var(--shadow-lg);
+    overflow: visible;
+  }
+
+  /* ── Banda superior del certificado (equivalente a filas 1-4 del XLSX) ── */
+  #cert-header-band {
+    background: var(--primary-light);        /* cyan #CCFFFF, no azul oscuro */
+    color: #000;
+    padding: 6px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border-thick);
+  }
+  #cert-header-band .cert-id {
+    background: var(--white); border: 1px solid var(--border-thick);
+    color: #000; font-size: 12px; font-weight: 700; letter-spacing: 1px;
+    padding: 3px 10px; border-radius: 0;
+  }
+  #cert-header-band .cert-meta {
+    color: #000; font-size: 11px;
+    display: flex; gap: 16px;
+  }
+  #cert-header-band .cert-meta span { display: flex; align-items: center; gap: 4px; }
+
+  /* ── Cuerpo del certificado ── */
+  #cert-body { padding: 8px 10px 10px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  td, th {
+    border: 1px solid var(--border-thick);   /* bordes negros estilo Excel */
+    padding: 3px 6px;
+    vertical-align: middle;
+    font-size: 13px;                         /* Arial 10 ≈ 13px */
+    line-height: 1.2;
+    color: #000;
+  }
+
+  /* ── Título principal (filas 1-2 XLSX, font sz=14 Arial) ── */
+  .title-main {
+    text-align: center;
+    font-weight: 700;
+    font-size: 16px;                         /* sz:14 Arial ≈ 16px */
+    color: #000;
+    letter-spacing: .3px;
+    padding: 10px 6px !important;
+    background: var(--white);
+    border: 2px solid var(--border-thick) !important;
+  }
+
+  /* ── Clases de encabezado — colores REALES del MONDIS.xlsx ── */
+  .ref-code {
+    font-size: 12px; font-weight: 700; text-align: center;
+    color: #000; background: var(--primary-light); /* cyan */
+    letter-spacing: .5px;
+  }
+  /* hdr-yellow en el XLSX es CYAN #CCFFFF (fill indexed=42) */
+  .hdr-yellow {
+    background: var(--primary-light);        /* #CCFFFF */
+    color: #000;
+  }
+  /* hdr-green en el XLSX es GRIS #C0C0C0 (fill indexed=22) con texto negro */
+  .hdr-green {
+    background: var(--neutral-100);          /* #C0C0C0 */
+    color: #000; font-weight: 700;
+  }
+  .hdr-green th {
+    color: #000;
+    font-weight: 700; font-size: 12px;       /* bold sz:10 */
+    letter-spacing: 0;
+    text-align: center;
+    border: 1px solid var(--border-thick) !important;
+  }
+  /* hdr-green2 en el XLSX es VERDE PASTEL #CCFFCC */
+  .hdr-green2 {
+    background: var(--accent);               /* #CCFFCC */
+    color: #000;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 0;
+  }
+  /* hdr-blue en el XLSX es CYAN #CCFFFF (mismo que yellow) */
+  .hdr-blue {
+    background: var(--primary-light);        /* #CCFFFF */
+    color: #000;
+    font-weight: 400;
+  }
+  /* hdr-gray en el XLSX es GRIS #C0C0C0 con texto azul navy */
+  .hdr-gray {
+    background: var(--neutral-100);          /* #C0C0C0 */
+    color: var(--primary);                   /* #000080 azul navy */
+    font-weight: 700;
+    font-size: 13px;
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  /* ── Campos editables ── */
+  input.campo, select.campo, textarea.campo {
+    border: none;
+    border-bottom: 1.5px solid transparent;
+    width: 100%; padding: 2px 4px;
+    font-family: var(--font); font-size: 12px;
+    background: transparent; outline: none;
+    transition: border-color .15s, background .15s;
+    border-radius: 2px;
+  }
+  input.campo:hover, select.campo:hover {
+    border-bottom-color: var(--neutral-200);
+    background: var(--neutral-50);
+  }
+  input.campo:focus, select.campo:focus, textarea.campo:focus {
+    background: #fffbea;
+    border-bottom: 1.5px solid var(--primary-mid);
+    box-shadow: 0 2px 0 rgba(30,87,153,.12);
+  }
+
+  /* ── Selectores de estado ── */
+  select.estado {
+    width: auto; min-width: 58px; font-weight: 700;
+    text-align: center; cursor: pointer;
+    border-radius: 4px; padding: 2px 4px;
+    border: 1px solid var(--neutral-200) !important;
+  }
+  select.estado:focus { border-color: var(--primary-mid) !important; }
+
+  /* ── Badges Paso / Fallo — colores reales XLSX ── */
+  .result-paso {
+    background: var(--success-light);       /* #CCFFCC verde pastel */
+    color: #000;                            /* texto negro, no verde */
+    font-weight: 700; font-size: 13px;
+    text-align: center;
+  }
+  .result-fallo {
+    background: var(--danger-light);        /* #FFCCCC */
+    color: var(--danger);                   /* #FF0000 (rojo del XLSX) */
+    font-weight: 700; font-size: 13px;
+    text-align: center;
+  }
+
+  /* ── Celdas de resultados calculados (en el XLSX quedan blancas) ── */
+  .result-calc {
+    background: var(--white);
+    color: #000;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  /* ── Tabla sensores – filas alternas POR SENSOR (3 filas por sensor) ── */
+  #tbody-sensores .sensor-alt-a { background: var(--row-alt-1); }  /* #FFFFF0 */
+  #tbody-sensores .sensor-alt-b { background: var(--row-alt-2); }  /* #F5FFF5 */
+  #tbody-sensores tr:hover      { background: #EEF4FF !important; }
+
+  /* Celdas internas: tipografía monoespaciada para números, alineado derecha */
+  #tbl-sensores td, #tbl-sensores th {
+    font-size: 11px;
+    padding: 3px 5px;
+  }
+  #tbl-sensores .col-meas {
+    width: 85px;
+    padding: 0;
+  }
+  #tbl-sensores .col-meas input[type=number] {
+    width: 100%;
+    text-align: right;
+    border: none;
+    background: transparent;
+    padding: 4px 6px;
+    font-size: 11px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+  }
+  #tbl-sensores .col-meas input[type=number]:hover { background: var(--white); }
+  #tbl-sensores .col-meas input[type=number]:focus {
+    background: #FFFBEA;
+    box-shadow: inset 0 0 0 1px var(--primary-mid);
+  }
+  #tbl-sensores .col-ub { white-space: normal; word-break: break-word; }
+  #tbl-sensores .col-ub input.campo { padding: 2px 4px; }
+  #tbl-sensores .col-sensor-id { vertical-align: middle; text-align: center; }
+  #tbl-sensores .col-obs { white-space: normal; }
+  #tbl-sensores .col-obs input.campo { padding: 2px 4px; font-size: 10.5px; }
+
+  /* Separar visualmente los sensores: borde más grueso al final del bloque */
+  #tbody-sensores .sensor-last td { border-bottom: 2px solid var(--border-thick); }
+
+  /* Celdas de resultados numéricos en la tabla sensores */
+  #tbl-sensores td.result-calc {
+    padding: 4px 6px;
+    text-align: right;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    vertical-align: middle;
+  }
+  #tbl-sensores td.result-paso,
+  #tbl-sensores td.result-fallo {
+    vertical-align: middle;
+    text-align: center;
+    font-size: 12px;
+  }
+
+  /* ── Inputs en tabla sensores ── */
+  #tbody-sensores input[type=number] {
+    width: 56px; text-align: right;
+    padding: 2px 3px;
+    border: 1px solid transparent; border-radius: 4px;
+    font-size: 11.5px; font-family: var(--font);
+    background: transparent;
+    transition: all .12s;
+  }
+  #tbody-sensores input[type=number]:hover {
+    border-color: var(--neutral-200); background: var(--white);
+  }
+  #tbody-sensores input[type=number]:focus {
+    border-color: var(--primary-mid); background: #fffbea;
+    box-shadow: 0 0 0 2px rgba(30,87,153,.1); outline: none;
+  }
+  /* Celdas de la tabla de sensores */
+  #tbl-sensores td, #tbl-sensores th {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #tbl-sensores td:first-child,
+  #tbl-sensores td:nth-child(2),
+  #tbl-sensores td:nth-child(14) {
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  /* ── Botón eliminar fila ── */
+  .btn-del {
+    background: none; border: 1px solid #f5c6c2;
+    border-radius: 4px; padding: 2px 7px;
+    color: var(--danger); cursor: pointer; font-size: 11px;
+    transition: all .12s;
+  }
+  .btn-del:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+  /* ── Botón agregar en cuerpo ── */
+  .btn-add-row {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin: 10px 0; padding: 7px 18px;
+    background: var(--accent-light); color: var(--accent);
+    border: 1.5px dashed var(--accent-mid); border-radius: var(--radius);
+    font-family: var(--font); font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all .15s;
+  }
+  .btn-add-row:hover {
+    background: var(--accent); color: var(--white);
+    border-style: solid;
+  }
+
+  /* ── Separador de sección ── */
+  .section-gap { margin-top: 16px; }
+
+  /* ── Tooltips en headers ── */
+  th[title] { cursor: help; }
+
+  /* ── Sync status ── */
+  /* ── Selector de órdenes en la toolbar ── */
+  .tb-select {
+    padding: 6px 10px;
+    border: 1px solid rgba(255,255,255,.3);
+    background: rgba(255,255,255,.12);
+    color: #fff;
+    font-family: var(--font);
+    font-size: 11.5px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    outline: none;
+    min-width: 180px;
+    max-width: 260px;
+  }
+  .tb-select:hover  { background: rgba(255,255,255,.2); }
+  .tb-select:focus  { background: rgba(255,255,255,.25); }
+  .tb-select option { background: var(--primary); color: #fff; }
+
+  .sync-status {
+    font-size: 11px; padding: 3px 10px; border-radius: 10px;
+    white-space: nowrap; font-weight: 500;
+    background: rgba(255,255,255,.12); color: rgba(255,255,255,.8);
+  }
+  .sync-status.ok   { background: rgba(39,174,96,.35);  color: #a9dfbf; }
+  .sync-status.err  { background: rgba(192,57,43,.45);  color: #f1948a; }
+  .sync-status.busy { background: rgba(214,137,16,.35); color: #fdebd0; }
+
+  /* ══ PRINT ════════════════════════════════════════════════════════════════ */
+  @media print {
+    body { background: white; font-size: 10px; }
+    #toolbar { display: none; }
+    #cert-wrap { padding: 0; }
+    #certificado { border-radius: 0; box-shadow: none; max-width: 100%; }
+    #cert-header-band { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .hdr-green, .hdr-green2, .hdr-green th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    input.campo, select.campo, textarea.campo { border: none !important; background: transparent !important; }
+    .btn-del, .btn-add-row { display: none; }
+    #tbody-sensores tr:hover { background: inherit !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════ TOOLBAR -->
+<div id="toolbar">
+  <div id="toolbar-logo">
+    <div class="logo-icon">🔬</div>
+    <h2>Editor Certificado MONDIS
+      <span>IC-CTE-F421 · Mantenimiento Preventivo</span>
+    </h2>
+  </div>
+  <button class="tb-btn excel" onclick="exportarExcel()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    Exportar Excel
+  </button>
+  <button class="tb-btn pdf" onclick="window.print()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    Imprimir / PDF
+  </button>
+  <button class="tb-btn add" onclick="agregarSensor()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Agregar Sensor
+  </button>
+  <button class="tb-btn add" onclick="pushDB()" title="Guardar en GitHub ahora">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    Guardar
+  </button>
+  <a class="tb-btn add" href="dashboard.html" title="Volver al dashboard de órdenes" style="text-decoration:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Dashboard
+  </a>
+  <button class="tb-btn add" onclick="cargarPorOrden()" title="Cargar certificado por Orden M (del campo Orden M.)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Cargar Orden
+  </button>
+  <span id="syncStatus" class="sync-status">—</span>
+  <button class="tb-btn reset" onclick="toggleCfg()">⚙ Config</button>
+  <button class="tb-btn reset" onclick="resetConfirm()">↺ Resetear</button>
+</div>
+
+<!-- Panel de configuración GitHub -->
+<div id="cfgPanel" style="background:#154360;padding:9px 20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+  <label style="color:#aed6f1;font-size:11px">Token GitHub:</label>
+  <input type="password" id="cfgToken" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off"
+    style="padding:5px 9px;border-radius:5px;border:none;font-size:12px;width:220px;letter-spacing:2px">
+  <label style="color:#aed6f1;font-size:11px">Repo (usuario/repo):</label>
+  <input type="text" id="cfgRepo" placeholder="swisss33sss-max/MONDIS" value="swisss33sss-max/MONDIS"
+    style="padding:5px 9px;border-radius:5px;border:none;font-size:12px;width:200px">
+  <button onclick="guardarConfig()"
+    style="padding:5px 14px;background:#2471a3;color:white;border:none;border-radius:5px;font-size:12px;cursor:pointer">
+    ✔ Conectar
+  </button>
+  <button id="btnOcultarCfg" onclick="toggleCfg()" style="display:none;padding:5px 14px;background:#2471a3;color:white;border:none;border-radius:5px;font-size:12px;cursor:pointer">
+    Ocultar
+  </button>
+  <span style="color:#7fb3d3;font-size:11px">El token se guarda solo en tu navegador (localStorage).</span>
+</div>
+
+<!-- Toast de notificaciones -->
+<div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;z-index:999;padding:10px 20px;border-radius:8px;color:white;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3)"></div>
+
+<!-- ══════════════════════════════════════════════════════════ CERTIFICADO -->
+<div id="cert-wrap">
+<div id="certificado">
+
+<!-- ── BANDA SUPERIOR ── -->
+<div id="cert-header-band">
+  <div class="cert-id">IC-CTE-F421</div>
+  <div class="cert-meta">
+    <span>📋 Versión: <input class="campo" id="version" value="2" style="width:30px;color:#fff;font-weight:700"></span>
+    <span>📅 Vigencia: <input class="campo" id="vigencia" value="sept-24" style="width:70px;color:#fff"></span>
+  </div>
+</div>
+
+<div id="cert-body">
+
+<!-- ── CABECERA ── -->
+<table id="tbl-cabecera" style="margin-top:14px">
+  <colgroup>
+    <col style="width:14%"><col style="width:9%"><col style="width:9%">
+    <col style="width:14%"><col style="width:9%"><col style="width:9%">
+    <col style="width:10%"><col style="width:26%">
+  </colgroup>
+  <tr>
+    <td colspan="6" rowspan="2" class="title-main">MANTENIMIENTO PREVENTIVO MONDIS</td>
+    <td class="hdr-gray" style="font-size:10px;letter-spacing:.5px">EDIFICIO</td>
+    <td><input class="campo" id="edificio" value="Catamarca 1242"></td>
+  </tr>
+  <tr>
+    <td class="hdr-gray" style="font-size:10px">SECTOR</td>
+    <td><input class="campo" id="sector" value="Laboratorio"></td>
+  </tr>
+  <tr class="hdr-yellow">
+    <td colspan="3" style="padding:6px 8px"><span style="color:var(--neutral-600);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Equipo</span><br>
+      <input class="campo" id="equipo" value="CEN-MON-LABCAT" style="font-size:13px;font-weight:600;color:var(--primary)"></td>
+    <td colspan="3" style="padding:6px 8px"><span style="color:var(--neutral-600);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Modelo</span><br>
+      <input class="campo" id="modelo" value="Mondis" style="font-size:13px;font-weight:600;color:var(--primary)"></td>
+    <td class="hdr-gray" style="font-size:10px">UBICACIÓN</td>
+    <td><input class="campo" id="ubicacion" value="Catamarca 1242 - 01 - 02 - 03"></td>
+  </tr>
+  <tr class="hdr-yellow">
+    <td colspan="3" style="padding:6px 8px"><span style="color:var(--neutral-600);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">N° Serie</span><br>
+      <input class="campo" id="nserie" value="VARIOS"></td>
+    <td colspan="3" style="padding:6px 8px"><span style="color:var(--neutral-600);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Marca</span><br>
+      <input class="campo" id="marca" value="DSNTEC"></td>
+    <td class="hdr-gray" style="font-size:10px">FECHA</td>
+    <td><input class="campo" id="fecha" type="date" value="2025-10-24"></td>
+  </tr>
+  <tr class="hdr-yellow">
+    <td colspan="6"></td>
+    <td class="hdr-gray" style="font-size:10px">ORDEN M.</td>
+    <td><input class="campo" id="orden"></td>
+  </tr>
+  <tr class="hdr-yellow">
+    <td colspan="6"></td>
+    <td class="hdr-gray" style="font-size:10px">REALIZÓ</td>
+    <td><input class="campo" id="realizo" value="Henry Salinas" style="font-weight:600"></td>
+  </tr>
+  <tr class="hdr-green">
+    <td colspan="2" style="padding:7px 8px">Instrumental utilizado</td>
+    <td>Marca</td>
+    <td>Modelo</td>
+    <td colspan="2">N° de serie</td>
+    <td colspan="2">Fecha Últ. Calibración</td>
+  </tr>
+  <tr>
+    <td colspan="2"><input class="campo" id="instr-tipo" value="Termómetro"></td>
+    <td><input class="campo" id="instr-marca" value="Madgetech"></td>
+    <td><input class="campo" id="instr-modelo" value="OctTemp2000"></td>
+    <td colspan="2"><input class="campo" id="instr-serie" value="P93230"></td>
+    <td colspan="2"><input class="campo" id="instr-fecha" type="date"></td>
+  </tr>
+</table>
+
+<!-- ── ESTADO DE VALORACIÓN ── -->
+<br>
+<table id="tbl-valoracion" class="section-gap">
+  <tr>
+    <td colspan="3" class="hdr-green2">Estado de valoración (marcar con X lo que corresponda)</td>
+  </tr>
+  <tr>
+    <td style="width:85%">Inspección superada, el equipo es apto para el uso</td>
+    <td style="width:8%" class="hdr-gray">Estado</td>
+    <td style="width:7%" class="text-center"><select class="campo estado" id="val1">
+      <option value="P" selected>P</option><option>F</option><option>NA</option><option>X</option>
+    </select></td>
+  </tr>
+  <tr>
+    <td>El equipo ha necesitado reparación</td>
+    <td class="hdr-gray">Estado</td>
+    <td class="text-center"><select class="campo estado" id="val2">
+      <option>P</option><option>F</option><option value="NA" selected>NA</option><option>X</option>
+    </select></td>
+  </tr>
+  <tr>
+    <td>El equipo no está reparado. No se puede usar</td>
+    <td class="hdr-gray">Estado</td>
+    <td class="text-center"><select class="campo estado" id="val3">
+      <option>P</option><option>F</option><option value="NA" selected>NA</option><option>X</option>
+    </select></td>
+  </tr>
+  <tr>
+    <td><b>Comentarios:</b> <input class="campo" id="comentarios" style="width:80%"></td>
+    <td class="hdr-gray">Estado</td>
+    <td class="text-center"><select class="campo estado" id="val4">
+      <option>P</option><option>F</option><option value="NA" selected>NA</option><option>X</option>
+    </select></td>
+  </tr>
+</table>
+
+<!-- ── 8.1 TEST INSPECCIÓN ── -->
+<br>
+<table id="tbl-inspeccion">
+  <colgroup><col style="width:8%"><col style="width:82%"><col style="width:10%"></colgroup>
+  <tr>
+    <td class="hdr-green2"><b>8.1</b></td>
+    <td class="hdr-green2" colspan="2">
+      <b>Test de Inspección y Funcionalidad</b><br>
+      Marcar P (Pasó) o F (Falló) según corresponda
+    </td>
+  </tr>
+  <tr>
+    <td class="hdr-gray">8.1.1</td>
+    <td class="hdr-blue">Sensores</td>
+    <td><select class="campo estado" id="t811">
+      <option value="P" selected>P</option><option>F</option><option>NA</option>
+    </select></td>
+  </tr>
+  <tr>
+    <td class="hdr-gray">8.1.2</td>
+    <td class="hdr-blue">Ubicación de los sensores</td>
+    <td><select class="campo estado" id="t812">
+      <option value="P" selected>P</option><option>F</option><option>NA</option>
+    </select></td>
+  </tr>
+  <tr>
+    <td class="hdr-gray">8.1.3</td>
+    <td class="hdr-blue">Vainas de sensores</td>
+    <td><select class="campo estado" id="t813">
+      <option value="P" selected>P</option><option>F</option><option>NA</option>
+    </select></td>
+  </tr>
+  <tr>
+    <td class="hdr-gray">8.1.4</td>
+    <td class="hdr-blue">Cables UTP</td>
+    <td><select class="campo estado" id="t814">
+      <option>P</option><option>F</option><option value="NA" selected>NA</option>
+    </select></td>
+  </tr>
+  <tr>
+    <td class="hdr-gray">8.1.5</td>
+    <td class="hdr-blue">Interfaces LAN</td>
+    <td><select class="campo estado" id="t815">
+      <option>P</option><option>F</option><option value="NA" selected>NA</option>
+    </select></td>
+  </tr>
+  <tr>
+    <td class="hdr-gray">8.1.6</td>
+    <td class="hdr-blue">Fuentes de alimentación</td>
+    <td><select class="campo estado" id="t816">
+      <option>P</option><option>F</option><option value="NA" selected>NA</option>
+    </select></td>
+  </tr>
+</table>
+
+<!-- ── 8.2 PARÁMETROS ── -->
+<br>
+<table id="tbl-params">
+  <colgroup>
+    <col style="width:8%"><col style="width:60%">
+    <col style="width:12%"><col style="width:8%"><col style="width:12%">
+  </colgroup>
+  <tr>
+    <td class="hdr-gray"><b>8.2.1</b></td>
+    <td class="hdr-green2" colspan="4"><b>Características del termómetro patrón</b></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td class="hdr-blue">Incertidumbre de calibración (Up) (Hasta -70°C)</td>
+    <td><input class="campo param" id="Up_cryo" type="number" step="0.001" value="0.18" oninput="recalcularTodo()"></td>
+    <td>°C</td>
+    <td><b>Error permitido:</b> <input class="campo" id="ep_patron" type="number" value="2" style="width:50px" oninput="recalcularTodo()"></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td class="hdr-blue">Incertidumbre de calibración (Up) (-20 … 10°C)</td>
+    <td><input class="campo param" id="Up_frio" type="number" step="0.001" value="0.14" oninput="recalcularTodo()"></td>
+    <td>°C</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td class="hdr-blue">Incertidumbre de calibración (Up) (29°C)</td>
+    <td><input class="campo param" id="Up_amb" type="number" step="0.001" value="0.11" oninput="recalcularTodo()"></td>
+    <td>°C</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td class="hdr-blue">Resolución (rp)</td>
+    <td><input class="campo param" id="rp" type="number" step="0.0001" value="0.01" oninput="recalcularTodo()"></td>
+    <td>°C</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td class="hdr-gray"><b>8.2.2</b></td>
+    <td class="hdr-green2" colspan="4"><b>Características del termómetro a calibrar</b></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td class="hdr-blue">Error permitido</td>
+    <td><input class="campo param" id="ep_cal" type="number" value="2" oninput="recalcularTodo()"></td>
+    <td>°C</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td class="hdr-blue">Resolución (rx)</td>
+    <td><input class="campo param" id="rx" type="number" step="0.0001" value="0.0625" oninput="recalcularTodo()"></td>
+    <td>°C</td>
+    <td></td>
+  </tr>
+</table>
+
+<!-- ── TABLA DE SENSORES — layout XLSX: 3 filas por sensor, merges verticales ── -->
+<br>
+<div style="overflow-x:auto;">
+<table id="tbl-sensores" style="min-width:1050px; width:100%; table-layout:fixed;">
+  <colgroup>
+    <col style="width:140px"><!-- Ubicación Sensor (A/loc/piso) -->
+    <col style="width:170px"><!-- Sensor ID -->
+    <col style="width:85px"><!-- Sensor (°C) -->
+    <col style="width:85px"><!-- Patrón (°C) -->
+    <col style="width:70px"><!-- Paso o fallo -->
+    <col style="width:95px"><!-- Uc -->
+    <col style="width:85px"><!-- ES -->
+    <col style="width:90px"><!-- ETtx -->
+    <col style="width:85px"><!-- Correc -->
+    <col style="width:180px"><!-- Observaciones -->
+    <col style="width:34px"><!-- Botón eliminar -->
+  </colgroup>
+  <thead>
+    <tr class="hdr-green">
+      <th>Ubicación Sensor</th>
+      <th>Sensor (ID)</th>
+      <th>Sensor<br>(°C)</th>
+      <th>Patron<br>(°C)</th>
+      <th title="Paso si |avg(S)-avg(P)| ≤ Error permitido">Paso o<br>fallo</th>
+      <th title="Uc = 2·√(s_S²+s_P²+0.084·rp²+0.084·rx²+0.25·Up²)">Incertidumbre<br>combinada<br>expandida (Uc)</th>
+      <th title="ES = |avg(S)-avg(P)|">Error<br>sistemático<br>(ES)</th>
+      <th title="ETtx = Uc + ES">Error total en<br>la medida (ETtx)</th>
+      <th title="avg(P) − avg(S)">Correccion</th>
+      <th>OBSERVACIONES</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody id="tbody-sensores"></tbody>
+</table>
+</div><!-- /scroll-wrap sensores -->
+
+<!-- ── BOTÓN AGREGAR SENSOR ── -->
+<div style="margin:12px 0">
+  <button class="btn-add-row" onclick="agregarSensor()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Agregar Sensor
+  </button>
+</div>
+
+</div><!-- /cert-body -->
+</div><!-- /certificado -->
+</div><!-- /cert-wrap -->
+
+<!-- ══════════════════════════════════════════════════════════ SCRIPT -->
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  CONFIGURACIÓN GITHUB
+// ═══════════════════════════════════════════════════════════════
+var REPO      = '';
+var TOKEN     = '';
+var DB_PATH   = 'db.json'; // se recalcula por Orden M
+var BRANCH    = 'main';
+var dbSHA     = '';
+var db        = null;
+var saveTimer = null;
+var SAVE_DELAY = 1500;
+var CFG_KEY   = 'gh_mondis_cfg_v1';
+
+// Obtiene el DB_PATH según la Orden M actual
+function getDBPath() {
+  var orden = document.getElementById('orden').value.trim();
+  if (!orden) return 'SIN_ORDEN.json';
+  // Sanitizar: solo alfanuméricos, guiones y guiones bajos
+  var safe = orden.replace(/[^a-zA-Z0-9\-_\.]/g, '_');
+  return 'OrdenM_' + safe + '.json';
+}
+
+function guardarConfig() {
+  TOKEN = document.getElementById('cfgToken').value.trim();
+  REPO  = document.getElementById('cfgRepo').value.trim();
+  if (!TOKEN || !REPO) { toast('Ingresa token y repo', true); return; }
+  localStorage.setItem(CFG_KEY, JSON.stringify({ token: TOKEN, repo: REPO }));
+  document.getElementById('btnOcultarCfg').style.display = '';
+  setSyncStatus('busy', 'Conectando...');
+  cargarDB();
+  // Poblar el selector apenas se conecta
+  refrescarOrdenes();
+}
+
+function cargarConfig() {
+  var raw = localStorage.getItem(CFG_KEY);
+  if (!raw) return false;
+  var cfg = JSON.parse(raw);
+  TOKEN = cfg.token || '';
+  REPO  = cfg.repo  || '';
+  document.getElementById('cfgToken').value = TOKEN;
+  document.getElementById('cfgRepo').value  = REPO;
+  document.getElementById('btnOcultarCfg').style.display = TOKEN ? '' : 'none';
+  return !!(TOKEN && REPO);
+}
+
+function toggleCfg() {
+  var p = document.getElementById('cfgPanel');
+  p.style.display = p.style.display === 'none' ? '' : 'none';
+}
+
+function apiHeaders() {
+  return {
+    'Authorization': 'token ' + TOKEN,
+    'Accept': 'application/vnd.github.v3+json',
+    'Content-Type': 'application/json'
+  };
+}
+
+function cargarDB() {
+  DB_PATH = getDBPath();
+  dbSHA = ''; // resetear SHA al cambiar de archivo
+  setSyncStatus('busy', 'Cargando...');
+  var url = 'https://api.github.com/repos/' + REPO + '/contents/' + DB_PATH + '?ref=' + BRANCH + '&t=' + Date.now();
+  fetch(url, { headers: apiHeaders() })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      dbSHA = data.sha;
+      var raw = atob(data.content.replace(/\n/g, ''));
+      var bytes = new Uint8Array(raw.length);
+      for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      db = JSON.parse(new TextDecoder('utf-8').decode(bytes));
+      cargarDesdeDB();
+      setSyncStatus('ok', '✓ Orden ' + (document.getElementById('orden').value||'—') + ' — ' + hora());
+    })
+    .catch(function(e) {
+      if (e.message.includes('404')) {
+        db = construirDB();
+        setSyncStatus('ok', 'Nueva Orden — se creará al guardar');
+        return;
+      }
+      setSyncStatus('err', 'Error al cargar: ' + e.message);
+      toast('Error al cargar: ' + e.message, true);
+    });
+}
+
+function saveDB() {
+  if (!TOKEN || !REPO) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(pushDB, SAVE_DELAY);
+}
+
+function pushDB() {
+  DB_PATH = getDBPath();
+  if (!TOKEN || !REPO) return;
+  var ordenActual = document.getElementById('orden').value.trim() || '—';
+  db = construirDB();
+  setSyncStatus('busy', 'Guardando...');
+  var content = btoa(unescape(encodeURIComponent(JSON.stringify(db, null, 2))));
+  var body = { message: 'update certificado ' + hora(), content: content, branch: BRANCH };
+  if (dbSHA) body.sha = dbSHA;
+  fetch('https://api.github.com/repos/' + REPO + '/contents/' + DB_PATH,
+        { method: 'PUT', headers: apiHeaders(), body: JSON.stringify(body) })
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.message); });
+      return r.json();
+    })
+    .then(function(data) {
+      dbSHA = data.content.sha;
+      setSyncStatus('ok', '✓ Guardado Orden ' + ordenActual + ' — ' + hora());
+      // Refrescar el selector por si es una orden nueva
+      refrescarOrdenes();
+    })
+    .catch(function(e) {
+      setSyncStatus('err', 'Error al guardar');
+      toast('Error: ' + e.message, true);
+    });
+}
+
+// Construye el objeto db completo desde el estado actual del formulario
+function construirDB() {
+  var p = getParams();
+  // Leer sensores del DOM
+  var sens = [];
+  sensorData.forEach(function(d, idx) {
+    sens.push({
+      ub:     document.getElementById('ub'+idx)     ? document.getElementById('ub'+idx).value     : d.ub,
+      sensor: document.getElementById('sensor'+idx) ? document.getElementById('sensor'+idx).value : d.sensor,
+      loc:    document.getElementById('loc'+idx)    ? document.getElementById('loc'+idx).value    : d.loc,
+      piso:   document.getElementById('piso'+idx)   ? document.getElementById('piso'+idx).value   : d.piso,
+      sm: [
+        parseFloat(document.getElementById('sm'+idx+'_1')?.value) || null,
+        parseFloat(document.getElementById('sm'+idx+'_2')?.value) || null,
+        parseFloat(document.getElementById('sm'+idx+'_3')?.value) || null,
+      ],
+      pm: [
+        parseFloat(document.getElementById('pm'+idx+'_1')?.value) || null,
+        parseFloat(document.getElementById('pm'+idx+'_2')?.value) || null,
+        parseFloat(document.getElementById('pm'+idx+'_3')?.value) || null,
+      ],
+      obs: document.getElementById('obs'+idx) ? document.getElementById('obs'+idx).value : d.obs,
+    });
+  });
+  return {
+    cabecera: {
+      version:   document.getElementById('version').value,
+      vigencia:  document.getElementById('vigencia').value,
+      equipo:    document.getElementById('equipo').value,
+      modelo:    document.getElementById('modelo').value,
+      edificio:  document.getElementById('edificio').value,
+      sector:    document.getElementById('sector').value,
+      ubicacion: document.getElementById('ubicacion').value,
+      nserie:    document.getElementById('nserie').value,
+      marca:     document.getElementById('marca').value,
+      fecha:     document.getElementById('fecha').value,
+      orden:     document.getElementById('orden').value,
+      realizo:   document.getElementById('realizo').value,
+      instr_tipo:  document.getElementById('instr-tipo').value,
+      instr_marca: document.getElementById('instr-marca').value,
+      instr_modelo:document.getElementById('instr-modelo').value,
+      instr_serie: document.getElementById('instr-serie').value,
+      instr_fecha: document.getElementById('instr-fecha').value,
+    },
+    valoracion: {
+      val1: document.getElementById('val1').value,
+      val2: document.getElementById('val2').value,
+      val3: document.getElementById('val3').value,
+      val4: document.getElementById('val4').value,
+      comentarios: document.getElementById('comentarios').value,
+    },
+    inspeccion: {
+      t811: document.getElementById('t811').value,
+      t812: document.getElementById('t812').value,
+      t813: document.getElementById('t813').value,
+      t814: document.getElementById('t814').value,
+      t815: document.getElementById('t815').value,
+      t816: document.getElementById('t816').value,
+    },
+    params: p,
+    sensores: sens,
+  };
+}
+
+// Carga el objeto db al formulario
+function cargarDesdeDB() {
+  if (!db) return;
+  var c = db.cabecera || {};
+  var v = db.valoracion || {};
+  var i = db.inspeccion || {};
+  var p = db.params || {};
+
+  function set(id, val) { var el = document.getElementById(id); if (el && val !== undefined) el.value = val; }
+
+  set('version',    c.version);    set('vigencia',   c.vigencia);
+  set('equipo',     c.equipo);     set('modelo',     c.modelo);
+  set('edificio',   c.edificio);   set('sector',     c.sector);
+  set('ubicacion',  c.ubicacion);  set('nserie',     c.nserie);
+  set('marca',      c.marca);      set('fecha',      c.fecha);
+  set('orden',      c.orden);      set('realizo',    c.realizo);
+  set('instr-tipo',   c.instr_tipo);  set('instr-marca',  c.instr_marca);
+  set('instr-modelo', c.instr_modelo);set('instr-serie',  c.instr_serie);
+  set('instr-fecha',  c.instr_fecha);
+
+  set('val1', v.val1); set('val2', v.val2); set('val3', v.val3); set('val4', v.val4);
+  set('comentarios', v.comentarios);
+
+  set('t811', i.t811); set('t812', i.t812); set('t813', i.t813);
+  set('t814', i.t814); set('t815', i.t815); set('t816', i.t816);
+
+  if (p.Up_cryo) set('Up_cryo', p.Up_cryo);
+  if (p.Up_frio) set('Up_frio', p.Up_frio);
+  if (p.Up_amb)  set('Up_amb',  p.Up_amb);
+  if (p.rp)      set('rp',      p.rp);
+  if (p.ep_cal)  set('ep_cal',  p.ep_cal);
+  if (p.rx)      set('rx',      p.rx);
+
+  if (db.sensores && db.sensores.length) {
+    sensorData = db.sensores;
+    renderSensores();
+  }
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function cargarPorOrden() {
+  var orden = document.getElementById('orden').value.trim();
+  if (!orden) { toast('Ingresá primero el número de Orden M.', true); return; }
+  if (!TOKEN || !REPO) { toast('Conectate primero con tu token GitHub.', true); return; }
+  setSyncStatus('busy', 'Cargando Orden ' + orden + '...');
+  cargarDB();
+}
+
+// ─── Selector de órdenes almacenadas ─────────────────────────────────────────
+// Lista los archivos OrdenM_*.json del repo y los muestra en el <select>
+// de la toolbar. Al seleccionar uno, lo carga en el editor.
+function refrescarOrdenes() {
+  if (!TOKEN || !REPO) {
+    toast('Conectate primero con tu token GitHub.', true);
+    return;
+  }
+  var sel = document.getElementById('selOrdenes');
+  // Guardar la selección actual
+  var prev = sel.value;
+  setSyncStatus('busy', 'Listando órdenes...');
+  var url = 'https://api.github.com/repos/' + REPO + '/contents/?ref=' + BRANCH + '&t=' + Date.now();
+  fetch(url, { headers: apiHeaders() })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(items) {
+      // Filtrar solo OrdenM_*.json y SIN_ORDEN.json
+      var ordenes = (items || [])
+        .filter(function(it) {
+          return it.type === 'file' && /^(OrdenM_|SIN_ORDEN)/.test(it.name) && it.name.endsWith('.json');
+        })
+        .map(function(it) { return it.name; })
+        .sort();
+
+      sel.innerHTML = '<option value="">— Órdenes guardadas (' + ordenes.length + ') —</option>' +
+        ordenes.map(function(name) {
+          // Mostrar label amigable
+          var label = name === 'SIN_ORDEN.json'
+            ? 'SIN_ORDEN (borrador sin número)'
+            : name.replace(/^OrdenM_/, 'Orden M ').replace(/\.json$/, '');
+          return '<option value="' + name + '"' + (name === prev ? ' selected' : '') + '>' + label + '</option>';
+        }).join('');
+
+      setSyncStatus('ok', ordenes.length + ' órdenes · ' + hora());
+    })
+    .catch(function(e) {
+      setSyncStatus('err', 'Error listando órdenes: ' + e.message);
+      toast('No pude listar las órdenes: ' + e.message, true);
+    });
+}
+
+function cargarOrdenDesdeSelector() {
+  var sel = document.getElementById('selOrdenes');
+  var filename = sel.value;
+  if (!filename) return;
+
+  // Extraer el número de orden desde el nombre del archivo:
+  //   OrdenM_12345.json → "12345"
+  //   SIN_ORDEN.json    → "" (borrador)
+  var ordenNum = '';
+  var m = filename.match(/^OrdenM_(.+)\.json$/);
+  if (m) ordenNum = m[1];
+
+  // Setear el campo "orden" y cargar
+  document.getElementById('orden').value = ordenNum;
+  if (!TOKEN || !REPO) {
+    toast('Conectate primero con tu token GitHub.', true);
+    return;
+  }
+  setSyncStatus('busy', 'Cargando ' + (ordenNum || 'borrador') + '...');
+  cargarDB();
+}
+function hora() {
+  var d = new Date();
+  return d.toLocaleDateString('es-AR') + ' ' + d.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+}
+
+function setSyncStatus(tipo, msg) {
+  var el = document.getElementById('syncStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'sync-status ' + tipo;
+}
+
+function toast(msg, esError) {
+  var t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.style.background = esError ? '#c0392b' : '#27ae60';
+  t.style.display = 'block';
+  setTimeout(function(){ t.style.display='none'; }, 4000);
+}
+
+// ── DATOS INICIALES ──────────────────────────────────────────────────────────
+const datosIniciales = [
+  { ub:"Sensor Mondis", sensor:"8C000005B3B69428", loc:"Freezer 1",         piso:"Piso 1", sm:[-16.2,-16.2,-16.2],  pm:[-16.2,-16.6,-16.29],  obs:"" },
+  { ub:"Sensor Mondis", sensor:"A9000005683C5728", loc:"Freezer 2",         piso:"Piso 1", sm:[-18.1,-18.2,-18.1],  pm:[-16.75,-15.25,-16.8], obs:"" },
+  { ub:"Sensor Mondis", sensor:"30000005632D2828", loc:"Freezer 3",         piso:"Piso 1", sm:[-16.4,-16.5,-16.5],  pm:[-15.73,-15.8,-15.8],  obs:"" },
+  { ub:"Sensor Mondis", sensor:"0D0000075F4A1F28", loc:"Freezer 4",         piso:"Piso 1", sm:[-19.5,-19.6,-19.6],  pm:[-17.73,-17.73,-17.8], obs:"" },
+  { ub:"Sensor Mondis", sensor:"BC000005B4261128", loc:"Freezer 5",         piso:"Piso 1", sm:[-13.8,-14.6,-14.7],  pm:[-13.84,-15.83,-15.3], obs:"" },
+  { ub:"Sensor Mondis", sensor:"680000056852A728", loc:"Freezer 6",         piso:"Piso 1", sm:[-12.7,-12.1,-13.3],  pm:[13.1,-14.1,-14.1],    obs:"Revisar dato patrón M1" },
+  { ub:"Sensor Mondis", sensor:"7600000C7C702628", loc:"Freezer 7",         piso:"Piso 1", sm:[-17.1,-17.3,-17.1],  pm:[-17.29,-16.85,-16.85],obs:"" },
+  { ub:"Sensor Mondis", sensor:"0200000C79453D28", loc:"Heladera 1",        piso:"Piso 1", sm:[3.1,2.9,3],          pm:[3.74,3.92,3.92],       obs:"" },
+  { ub:"Sensor Mondis", sensor:"1C00000C79DE9A28", loc:"Baño term. 26353",  piso:"Piso 1", sm:[35.4,35.4,35.4],     pm:[36.49,36.47,36.47],    obs:"" },
+  { ub:"Sensor Mondis", sensor:"BF00080276274010", loc:"Estufa 27500",      piso:"Piso 1", sm:[35,35,35],           pm:[35.29,35.26,35.24],    obs:"" },
+  { ub:"Sensor Mondis", sensor:"7900000567979E28", loc:"Ambiente",          piso:"Piso 1", sm:[20.4,20.4,20.4],     pm:[20.3,20.3,20.4],       obs:"" },
+  { ub:"Sensor Mondis", sensor:"7500000568F5B828", loc:"Freezer 1",         piso:"Piso 2", sm:[-18.2,-18.6,-19],    pm:[-19.95,-19.43,-19.43], obs:"" },
+  { ub:"Sensor Mondis", sensor:"C500000568BF4128", loc:"Freezer 2",         piso:"Piso 2", sm:[-20.4,-20.8,-20.4],  pm:[-20.99,-20.4,-20.4],   obs:"" },
+  { ub:"Sensor Mondis", sensor:"DC000007605B1928", loc:"Heladera 1",        piso:"Piso 2", sm:[2.06,2.04,2.01],     pm:[2.41,2.8,2.8],         obs:"" },
+  { ub:"Sensor Mondis", sensor:"1400000567D05328", loc:"Heladera 2",        piso:"Piso 2", sm:[4.41,4.08,4.06],     pm:[4.28,4.29,4.3],        obs:"" },
+  { ub:"Sensor Mondis", sensor:"F100000567B8FA28", loc:"Heladera 3",        piso:"Piso 2", sm:[4.61,4.66,4.68],     pm:[4.7,4.8,4.76],         obs:"" },
+  { ub:"Sensor Mondis", sensor:"61000005A054B228", loc:"Heladera 4",        piso:"Piso 2", sm:[4,3.7,4.2],          pm:[3.5,4.21,4.21],        obs:"" },
+  { ub:"Sensor Mondis", sensor:"3700000568630A28", loc:"Heladera 5",        piso:"Piso 2", sm:[5.2,5.2,5.3],        pm:[4.86,5.36,5.36],       obs:"" },
+  { ub:"Sensor Mondis", sensor:"310001000033AA7E", loc:"Ambiente Humedad",  piso:"Piso 2", sm:[45.3,45.3,45.3],     pm:[45.3,45.3,45.2],       obs:"" },
+  { ub:"Sensor Mondis", sensor:"D500080250F4D610", loc:"Ambiente 2C",       piso:"Piso 2", sm:[21.5,21.5,21.5],     pm:[21.12,20.96,20.96],    obs:"" },
+  { ub:"Sensor Mondis", sensor:"7400000C7BB85628", loc:"Freezer 1",         piso:"Piso 3", sm:[-19.1,-19.2,-19.1],  pm:[-19.1,-19.1,-19.1],    obs:"" },
+  { ub:"Sensor Mondis", sensor:"3A00000567D00328", loc:"Freezer 2",         piso:"Piso 3", sm:[-16.5,-16.3,-16.2],  pm:[-14.48,-14.95,-14.95], obs:"" },
+  { ub:"Sensor Mondis", sensor:"2F00080251061C10", loc:"Freezer 3",         piso:"Piso 3", sm:[-23.5,-23.5,-23.5],  pm:[-22.5,-22.3,-22.4],    obs:"" },
+  { ub:"Sensor Mondis", sensor:"4F000005A0109028", loc:"Freezer 4",         piso:"Piso 3", sm:[-23.1,-23.1,-23.1],  pm:[-20.86,-23.05,-23.07], obs:"" },
+  { ub:"Sensor Mondis", sensor:"EE001000002E617E", loc:"CrioFreezer 4",     piso:"Piso 3", sm:[-72.9,-73.3,-73.3],  pm:[-71.2,-71.5,-71.1],    obs:"" },
+  { ub:"Sensor Mondis", sensor:"740000056723BB28", loc:"Heladera 1",        piso:"Piso 3", sm:[4.4,4.6,4.6],        pm:[5.25,5.66,null],       obs:"" },
+  { ub:"Sensor Mondis", sensor:"520000075F7FD628", loc:"Heladera 3",        piso:"Piso 3", sm:[4.9,4.9,4.9],        pm:[6.87,4.95,null],       obs:"" },
+  { ub:"Sensor Mondis", sensor:"2900010000337E7E", loc:"Ambiente Humedad",  piso:"Piso 3", sm:[19.3,19.3,19.5],     pm:[19.3,19.3,19.4],       obs:"" },
+];
+
+// ── PARÁMETROS ───────────────────────────────────────────────────────────────
+function getParams() {
+  return {
+    Up_cryo: parseFloat(document.getElementById('Up_cryo').value) || 0.18,
+    Up_frio: parseFloat(document.getElementById('Up_frio').value) || 0.14,
+    Up_amb:  parseFloat(document.getElementById('Up_amb').value)  || 0.11,
+    rp:      parseFloat(document.getElementById('rp').value)      || 0.01,
+    ep_cal:  parseFloat(document.getElementById('ep_cal').value)  || 2,
+    rx:      parseFloat(document.getElementById('rx').value)      || 0.0625,
+  };
+}
+
+// ── SELECCIÓN DE Up SEGÚN TEMPERATURA ────────────────────────────────────────
+// Regla del certificado original:
+//   temp < -20  → Up_frio  (rango -20…10°C aprox; cryo usa Up_amb según fórmula vista)
+//   temp < -60  → Up_cryo
+//   resto       → Up_amb
+// Mirando las fórmulas reales del Excel:
+//   Sensores a ~-70°C usan $I$31 (Up_cryo índice fila 31 en el Excel)  → Up_cryo
+//   Sensores a -20…-13°C usan $I$32 (fila 32) → Up_frio
+//   Sensores a temp ambiente/heladeras/estufas usan $I$33 (fila 33) → Up_amb
+function selectUp(promS, p) {
+  if (promS < -60)  return p.Up_cryo;
+  if (promS < -10)  return p.Up_frio;
+  return p.Up_amb;
+}
+
+// ── FÓRMULAS ESTADÍSTICAS ─────────────────────────────────────────────────────
+function avg(arr)  { const a=arr.filter(v=>v!==null&&!isNaN(v)); return a.length? a.reduce((s,x)=>s+x,0)/a.length : NaN; }
+function stdev(arr){
+  const a=arr.filter(v=>v!==null&&!isNaN(v));
+  if(a.length<2) return 0;
+  const m=avg(a);
+  return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1));
+}
+
+// Uc = 2 * sqrt( stdev(S)² + stdev(P)² + 0.084·rp² + 0.084·rx² + 0.25·Up² )
+function calcUc(sm, pm, Up, rp, rx) {
+  const ss = stdev(sm), sp = stdev(pm);
+  return 2 * Math.sqrt(ss**2 + sp**2 + 0.084*rp**2 + 0.084*rx**2 + 0.25*Up**2);
+}
+// ES = |avg(S) - avg(P)|
+function calcES(sm, pm) { return Math.abs(avg(sm) - avg(pm)); }
+// ETtx = |Uc + ES|
+function calcETtx(Uc, ES) { return Math.abs(Uc + ES); }
+// Corrección = avg(P) - avg(S)
+function calcCorr(sm, pm) { return avg(pm) - avg(sm); }
+// Paso/Fallo: |avg(S) - avg(P)| <= ep_cal
+function calcPasoFallo(sm, pm, ep_cal) {
+  return calcES(sm, pm) <= ep_cal ? "Paso" : "Fallo";
+}
+
+// ── LEER MEDICIONES DE FILA ───────────────────────────────────────────────────
+function leerMeds(idx) {
+  const sm = [], pm = [];
+  for(let i=1;i<=3;i++){
+    const vs = document.getElementById(`sm${idx}_${i}`);
+    const vp = document.getElementById(`pm${idx}_${i}`);
+    sm.push(vs && vs.value !== '' ? parseFloat(vs.value) : null);
+    pm.push(vp && vp.value !== '' ? parseFloat(vp.value) : null);
+  }
+  return { sm, pm };
+}
+
+// ── RECALCULAR UNA FILA ───────────────────────────────────────────────────────
+function recalcFila(idx) {
+  const p  = getParams();
+  const {sm, pm} = leerMeds(idx);
+  const smv = sm.filter(v=>v!==null&&!isNaN(v));
+  const pmv = pm.filter(v=>v!==null&&!isNaN(v));
+  if(smv.length < 1 || pmv.length < 1) return;
+
+  const promS = avg(smv);
+  const Up    = selectUp(promS, p);
+  const Uc    = calcUc(sm, pm, Up, p.rp, p.rx);
+  const ES    = calcES(sm, pm);
+  const ETtx  = calcETtx(Uc, ES);
+  const Corr  = calcCorr(sm, pm);
+  const pf    = calcPasoFallo(sm, pm, p.ep_cal);
+
+  const setPF = (el, val) => {
+    el.textContent = val;
+    el.className = val === 'Paso' ? 'result-paso' : 'result-fallo';
+  };
+
+  const n = (v, dec=6) => isNaN(v) ? '—' : v.toFixed(dec);
+
+  const elPF   = document.getElementById(`pf${idx}`);
+  const elUc   = document.getElementById(`uc${idx}`);
+  const elES   = document.getElementById(`es${idx}`);
+  const elET   = document.getElementById(`et${idx}`);
+  const elCo   = document.getElementById(`co${idx}`);
+
+  if(elPF)  setPF(elPF, pf);
+  if(elUc)  elUc.textContent  = n(Uc,  6);
+  if(elES)  elES.textContent  = n(ES,  6);
+  if(elET)  elET.textContent  = n(ETtx,6);
+  if(elCo)  elCo.textContent  = n(Corr,6);
+}
+
+function recalcularTodo() {
+  const rows = document.querySelectorAll('[data-sensoridx]');
+  const indices = new Set([...rows].map(r=>r.dataset.sensoridx));
+  indices.forEach(i => recalcFila(parseInt(i)));
+}
+
+// ── RENDER TABLA DE SENSORES ──────────────────────────────────────────────────
+let sensorData = JSON.parse(JSON.stringify(datosIniciales));
+
+function renderSensores() {
+  const tbody = document.getElementById('tbody-sensores');
+  tbody.innerHTML = '';
+
+  sensorData.forEach((d, idx) => {
+    // XLSX: cada sensor ocupa 3 filas verticales (una por cada medición M1/M2/M3)
+    // con la columna A (Ubicación Sensor) dividida en 3 celdas (ub/loc/piso),
+    // y las columnas Sensor-ID, Paso/Fallo, Uc, ES, ETtx, Correc y Observaciones
+    // mergeadas verticalmente con rowspan="3".
+    const sv = (i) => (d.sm[i] !== null && d.sm[i] !== undefined) ? d.sm[i] : '';
+    const pv = (i) => (d.pm[i] !== null && d.pm[i] !== undefined) ? d.pm[i] : '';
+    const obsEsc = (d.obs || '').replace(/"/g, '&quot;');
+
+    // Fila 1 — contiene todos los rowspan=3 (Sensor ID, Paso, Uc, ES, ETtx, Correc, Obs, eliminar)
+    const tr1 = document.createElement('tr');
+    tr1.dataset.sensoridx = idx;
+    const altClass = idx % 2 === 0 ? 'sensor-alt-a' : 'sensor-alt-b';
+    tr1.className = 'sensor-row sensor-first ' + altClass;
+    tr1.innerHTML = `
+      <td class="col-ub"><input class="campo" id="ub${idx}" value="${d.ub || ''}" placeholder="Categoría" style="font-weight:600"></td>
+      <td class="col-sensor-id" rowspan="3">
+        <input class="campo" id="sensor${idx}" value="${d.sensor || ''}" placeholder="ID Sensor"
+          style="font-family:'Consolas',monospace;font-size:11px;color:#0055aa;text-align:center">
+      </td>
+      <td class="col-meas"><input class="campo" id="sm${idx}_1" type="number" step="0.01"
+        value="${sv(0)}" oninput="recalcFila(${idx});saveDB()"></td>
+      <td class="col-meas"><input class="campo" id="pm${idx}_1" type="number" step="0.01"
+        value="${pv(0)}" oninput="recalcFila(${idx});saveDB()"></td>
+      <td class="result-paso" rowspan="3" id="pf${idx}">—</td>
+      <td class="result-calc" rowspan="3" id="uc${idx}">—</td>
+      <td class="result-calc" rowspan="3" id="es${idx}">—</td>
+      <td class="result-calc" rowspan="3" id="et${idx}">—</td>
+      <td class="result-calc" rowspan="3" id="co${idx}">—</td>
+      <td class="col-obs" rowspan="3">
+        <input class="campo obs-input" id="obs${idx}" value="${obsEsc}" placeholder="—"
+          style="width:100%;text-align:left">
+      </td>
+      <td class="col-del" rowspan="3" style="text-align:center">
+        <button class="btn-del" title="Eliminar sensor" onclick="eliminarSensor(${idx})">✕</button>
+      </td>
+    `;
+    tbody.appendChild(tr1);
+
+    // Fila 2 — M2 + input de loc (equipo/freezer/heladera)
+    const tr2 = document.createElement('tr');
+    tr2.dataset.sensoridx = idx;
+    tr2.className = 'sensor-row ' + altClass;
+    tr2.innerHTML = `
+      <td class="col-ub"><input class="campo" id="loc${idx}" value="${d.loc || ''}" placeholder="Equipo"></td>
+      <td class="col-meas"><input class="campo" id="sm${idx}_2" type="number" step="0.01"
+        value="${sv(1)}" oninput="recalcFila(${idx});saveDB()"></td>
+      <td class="col-meas"><input class="campo" id="pm${idx}_2" type="number" step="0.01"
+        value="${pv(1)}" oninput="recalcFila(${idx});saveDB()"></td>
+    `;
+    tbody.appendChild(tr2);
+
+    // Fila 3 — M3 + input de piso
+    const tr3 = document.createElement('tr');
+    tr3.dataset.sensoridx = idx;
+    tr3.className = 'sensor-row sensor-last ' + altClass;
+    tr3.innerHTML = `
+      <td class="col-ub"><input class="campo" id="piso${idx}" value="${d.piso || ''}" placeholder="Piso" style="color:#555;font-size:10.5px"></td>
+      <td class="col-meas"><input class="campo" id="sm${idx}_3" type="number" step="0.01"
+        value="${sv(2)}" oninput="recalcFila(${idx});saveDB()"></td>
+      <td class="col-meas"><input class="campo" id="pm${idx}_3" type="number" step="0.01"
+        value="${pv(2)}" oninput="recalcFila(${idx});saveDB()"></td>
+    `;
+    tbody.appendChild(tr3);
+  });
+
+  recalcularTodo();
+}
+
+// ── AGREGAR / ELIMINAR SENSOR ─────────────────────────────────────────────────
+function agregarSensor() {
+  sensorData.push({
+    ub:"Sensor Mondis", sensor:"", loc:"Nuevo equipo", piso:"Piso 1",
+    sm:[null,null,null], pm:[null,null,null], obs:""
+  });
+  renderSensores();
+  saveDB();
+  // Scroll al nuevo sensor
+  const rows = document.querySelectorAll('[data-sensoridx]');
+  if(rows.length) rows[rows.length-1].scrollIntoView({behavior:'smooth'});
+}
+
+function eliminarSensor(idx) {
+  if(sensorData.length <= 1) { alert('Debe haber al menos un sensor.'); return; }
+  const d = sensorData[idx];
+  if(confirm(`¿Eliminar fila "${d.loc} / ${d.piso}"?`)) {
+    sensorData.splice(idx, 1);
+    renderSensores();
+    saveDB();
+  }
+}
+
+// ── EXPORTAR EXCEL ────────────────────────────────────────────────────────────
+function exportarExcel() {
+  const wb = XLSX.utils.book_new();
+  const p  = getParams();
+
+  // ── Helpers de estilo ──────────────────────────────────────────────────────
+  const borde = {
+    top:    { style: 'thin', color: { rgb: '888888' } },
+    bottom: { style: 'thin', color: { rgb: '888888' } },
+    left:   { style: 'thin', color: { rgb: '888888' } },
+    right:  { style: 'thin', color: { rgb: '888888' } },
+  };
+  const bordeGrueso = {
+    top:    { style: 'medium', color: { rgb: '444444' } },
+    bottom: { style: 'medium', color: { rgb: '444444' } },
+    left:   { style: 'medium', color: { rgb: '444444' } },
+    right:  { style: 'medium', color: { rgb: '444444' } },
+  };
+
+  const estiloTitulo = {
+    font:      { bold: true, sz: 14, color: { rgb: '1A3A5C' } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    fill:      { fgColor: { rgb: 'EEF3FA' } },
+    border:    bordeGrueso,
+  };
+  const estiloHeaderVerde = {
+    font:      { bold: true, sz: 10, color: { rgb: 'FFFFFF' } },
+    fill:      { fgColor: { rgb: '1A3A5C' } },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+    border:    borde,
+  };
+  const estiloHeaderVerde2 = {
+    font:      { bold: true, sz: 10, color: { rgb: 'FFFFFF' } },
+    fill:      { fgColor: { rgb: '0D7A3E' } },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+    border:    borde,
+  };
+  const estiloAmarillo = {
+    font:      { sz: 10 },
+    fill:      { fgColor: { rgb: 'FEFCE8' } },
+    border:    borde,
+    alignment: { vertical: 'center' },
+  };
+  const estiloGris = {
+    font:      { bold: true, sz: 10, color: { rgb: '4A5568' } },
+    fill:      { fgColor: { rgb: 'EEF1F5' } },
+    border:    borde,
+    alignment: { vertical: 'center' },
+  };
+  const estiloAzulClaro = {
+    font:      { sz: 10, color: { rgb: '1A3A5C' } },
+    fill:      { fgColor: { rgb: 'D6E4F0' } },
+    border:    borde,
+    alignment: { vertical: 'center', wrapText: true },
+  };
+  const estiloNormal = {
+    font:      { sz: 10 },
+    border:    borde,
+    alignment: { vertical: 'center' },
+  };
+  const estiloPaso = {
+    font:      { bold: true, sz: 10, color: { rgb: '1A7A3C' } },
+    fill:      { fgColor: { rgb: 'E6F4EC' } },
+    border:    borde,
+    alignment: { horizontal: 'center', vertical: 'center' },
+  };
+  const estiloFallo = {
+    font:      { bold: true, sz: 10, color: { rgb: 'C0392B' } },
+    fill:      { fgColor: { rgb: 'FDECEA' } },
+    border:    borde,
+    alignment: { horizontal: 'center', vertical: 'center' },
+  };
+  const estiloCalc = {
+    font:      { sz: 10, color: { rgb: '1A3A5C' } },
+    fill:      { fgColor: { rgb: 'EBF3FF' } },
+    border:    borde,
+    alignment: { horizontal: 'right', vertical: 'center' },
+    numFmt:    '0.000000',
+  };
+  const estiloNum = {
+    font:      { sz: 10 },
+    border:    borde,
+    alignment: { horizontal: 'right', vertical: 'center' },
+  };
+
+  // ── Datos ──────────────────────────────────────────────────────────────────
+  const rows = [];
+  const styles = [];  // styles[r][c] = estilo
+
+  function addRow(cells, estilos) {
+    rows.push(cells);
+    styles.push(estilos || cells.map(() => estiloNormal));
+  }
+
+  const v = (id) => { const e = document.getElementById(id); return e ? e.value : ''; };
+
+  // Fila 1: Título + código
+  addRow(
+    ['MANTENIMIENTO PREVENTIVO MONDIS','','','','','','IC-CTE-F421',''],
+    [estiloTitulo,estiloTitulo,estiloTitulo,estiloTitulo,estiloTitulo,estiloTitulo,
+     {...estiloGris, alignment:{horizontal:'center',vertical:'center'}}, estiloNormal]
+  );
+  // Fila 2
+  addRow(['','','','','','','Versión: '+v('version'),''],
+    [estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloGris,estiloNormal]);
+  // Fila 3
+  addRow(['','','','','','','Vigencia: '+v('vigencia'),''],
+    [estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloGris,estiloNormal]);
+  // Equipo / Edificio
+  addRow(['Equipo: '+v('equipo'),'','','Modelo: '+v('modelo'),'','','Edificio:',v('edificio')],
+    [estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloGris,estiloNormal]);
+  addRow(['','','','','','','Sector:',v('sector')],
+    [estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloGris,estiloNormal]);
+  addRow(['','','','','','','Ubicación:',v('ubicacion')],
+    [estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloGris,estiloNormal]);
+  addRow(['N° serie: '+v('nserie'),'','','Marca: '+v('marca'),'','','Fecha:',v('fecha')],
+    [estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloGris,estiloNormal]);
+  addRow(['','','','','','','Orden M:',v('orden')],
+    [estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloGris,estiloNormal]);
+  addRow(['','','','','','','Realizó:',v('realizo')],
+    [estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloAmarillo,estiloGris,{...estiloNormal,font:{bold:true,sz:10}}]);
+  // Instrumental
+  addRow(['Instrumental utilizado','','Marca','Modelo','N° de serie','','Fecha Últ. Calibración',''],
+    [estiloHeaderVerde,estiloHeaderVerde,estiloHeaderVerde,estiloHeaderVerde,estiloHeaderVerde,estiloHeaderVerde,estiloHeaderVerde,estiloHeaderVerde]);
+  addRow([v('instr-tipo'),'',v('instr-marca'),v('instr-modelo'),v('instr-serie'),'',v('instr-fecha'),''],
+    [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+
+  // Espacio
+  addRow(['','','','','','','',''], [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+
+  // Estado de valoración
+  addRow(['Estado de valoración','','','','','','',''],
+    [estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2]);
+  addRow(['Inspección superada, el equipo es apto para el uso','','','','','','Estado',v('val1')],
+    [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloGris,estiloPaso]);
+  addRow(['El equipo ha necesitado reparación','','','','','','Estado',v('val2')],
+    [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloGris,estiloGris]);
+  addRow(['El equipo no está reparado. No se puede usar','','','','','','Estado',v('val3')],
+    [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloGris,estiloGris]);
+  addRow(['Comentarios: '+v('comentarios'),'','','','','','Estado',v('val4')],
+    [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloGris,estiloGris]);
+
+  addRow(['','','','','','','',''], [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+
+  // 8.1
+  addRow(['8.1','Test de Inspección y Funcionalidad','','','','','',''],
+    [estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2]);
+  [['8.1.1','Sensores','t811'],['8.1.2','Ubicación de los sensores','t812'],
+   ['8.1.3','Vainas de sensores','t813'],['8.1.4','Cables UTP','t814'],
+   ['8.1.5','Interfaces LAN','t815'],['8.1.6','Fuentes de alimentación','t816']
+  ].forEach(([num,desc,id]) => {
+    const val = v(id);
+    addRow([num,desc,'','','','','',val],
+      [estiloGris,estiloAzulClaro,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,
+       val==='P'?estiloPaso:val==='F'?estiloFallo:estiloGris]);
+  });
+
+  addRow(['','','','','','','',''], [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+
+  // 8.2.1
+  addRow(['8.2.1','Características del termómetro patrón','','','','','',''],
+    [estiloGris,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2]);
+  addRow(['','Incertidumbre (Up) Hasta -70°C',p.Up_cryo,'°C','','Error permitido:',p.ep_cal,'°C'],
+    [estiloNormal,estiloAzulClaro,estiloNum,estiloGris,estiloNormal,estiloGris,estiloNum,estiloGris]);
+  addRow(['','Incertidumbre (Up) -20…10°C',p.Up_frio,'°C','','','',''],
+    [estiloNormal,estiloAzulClaro,estiloNum,estiloGris,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+  addRow(['','Incertidumbre (Up) 29°C',p.Up_amb,'°C','','','',''],
+    [estiloNormal,estiloAzulClaro,estiloNum,estiloGris,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+  addRow(['','Resolución (rp)',p.rp,'°C','','','',''],
+    [estiloNormal,estiloAzulClaro,estiloNum,estiloGris,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+  addRow(['8.2.2','Características del termómetro a calibrar','','','','','',''],
+    [estiloGris,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2,estiloHeaderVerde2]);
+  addRow(['','Error permitido',p.ep_cal,'°C','','','',''],
+    [estiloNormal,estiloAzulClaro,estiloNum,estiloGris,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+  addRow(['','Resolución (rx)',p.rx,'°C','','','',''],
+    [estiloNormal,estiloAzulClaro,estiloNum,estiloGris,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+
+  addRow(['','','','','','','',''], [estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal,estiloNormal]);
+
+  // Header tabla sensores (14 columnas)
+  const hdrS = Array(14).fill(estiloHeaderVerde);
+  addRow(['Ubicación / Piso','Sensor ID','S-M1','S-M2','S-M3','P-M1','P-M2','P-M3',
+          'Paso/Fallo','Uc','ES','ETtx','Correc.','Observaciones'], hdrS);
+
+  // Filas de sensores
+  sensorData.forEach((d, idx) => {
+    const sm1 = parseFloat(document.getElementById(`sm${idx}_1`)?.value)||null;
+    const sm2 = parseFloat(document.getElementById(`sm${idx}_2`)?.value)||null;
+    const sm3 = parseFloat(document.getElementById(`sm${idx}_3`)?.value)||null;
+    const pm1 = parseFloat(document.getElementById(`pm${idx}_1`)?.value)||null;
+    const pm2 = parseFloat(document.getElementById(`pm${idx}_2`)?.value)||null;
+    const pm3 = parseFloat(document.getElementById(`pm${idx}_3`)?.value)||null;
+    const sm = [sm1,sm2,sm3], pm = [pm1,pm2,pm3];
+    const promS = avg(sm.filter(v=>v!==null&&!isNaN(v)));
+    const Up   = selectUp(promS, p);
+    const Uc   = calcUc(sm, pm, Up, p.rp, p.rx);
+    const ES   = calcES(sm, pm);
+    const ETtx = calcETtx(Uc, ES);
+    const Corr = calcCorr(sm, pm);
+    const pf   = calcPasoFallo(sm, pm, p.ep_cal);
+    const loc    = document.getElementById(`loc${idx}`)?.value || d.loc;
+    const piso   = document.getElementById(`piso${idx}`)?.value || d.piso;
+    const obs    = document.getElementById(`obs${idx}`)?.value || d.obs;
+    const sensor = document.getElementById(`sensor${idx}`)?.value || d.sensor;
+    const bgFila = idx % 2 === 0
+      ? { fgColor: { rgb: 'FFFFF0' } }
+      : { fgColor: { rgb: 'F5FFF5' } };
+    const estiloFila = { font:{sz:10}, fill:bgFila, border:borde, alignment:{vertical:'center'} };
+    const estiloFilaR = { font:{sz:10}, fill:bgFila, border:borde, alignment:{horizontal:'right',vertical:'center'} };
+
+    rows.push([
+      `${loc} / ${piso}`, sensor,
+      sm1, sm2, sm3, pm1, pm2, pm3,
+      pf,
+      isNaN(Uc)?'':+Uc.toFixed(6),
+      isNaN(ES)?'':+ES.toFixed(6),
+      isNaN(ETtx)?'':+ETtx.toFixed(6),
+      isNaN(Corr)?'':+Corr.toFixed(6),
+      obs
+    ]);
+    styles.push([
+      estiloFila, estiloFila,
+      estiloFilaR, estiloFilaR, estiloFilaR,
+      estiloFilaR, estiloFilaR, estiloFilaR,
+      pf==='Paso' ? estiloPaso : estiloFallo,
+      estiloCalc, estiloCalc, estiloCalc, estiloCalc,
+      estiloFila
+    ]);
+  });
+
+  // ── Armar hoja ────────────────────────────────────────────────────────────
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // Aplicar estilos celda por celda
+  const enc = XLSX.utils.encode_cell;
+  rows.forEach((row, r) => {
+    row.forEach((_, c) => {
+      const ref = enc({ r, c });
+      if (!ws[ref]) ws[ref] = { v: row[c], t: typeof row[c] === 'number' ? 'n' : 's' };
+      if (styles[r] && styles[r][c]) ws[ref].s = styles[r][c];
+    });
+  });
+
+  // Anchos de columna
+  ws['!cols'] = [
+    {wch:22},{wch:20},{wch:8},{wch:8},{wch:8},
+    {wch:8},{wch:8},{wch:8},{wch:10},
+    {wch:14},{wch:12},{wch:12},{wch:12},{wch:22}
+  ];
+  // Alto de fila para el título
+  ws['!rows'] = [{ hpt: 28 }];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Certificado MONDIS');
+  const fecha = document.getElementById('fecha').value.replace(/-/g,'');
+  XLSX.writeFile(wb, `CertMONDIS_${fecha||'export'}.xlsx`);
+}
+
+// ── RESET ─────────────────────────────────────────────────────────────────────
+function resetConfirm() {
+  if(confirm('¿Resetear todos los datos al estado original del archivo?')) {
+    sensorData = JSON.parse(JSON.stringify(datosIniciales));
+    renderSensores();
+    // reset cabecera
+    document.getElementById('equipo').value = 'CEN-MON-LABCAT';
+    document.getElementById('modelo').value = 'Mondis';
+    document.getElementById('fecha').value  = '2025-10-24';
+    document.getElementById('realizo').value= 'Henry Salinas';
+    document.getElementById('Up_cryo').value= '0.18';
+    document.getElementById('Up_frio').value= '0.14';
+    document.getElementById('Up_amb').value = '0.11';
+    document.getElementById('rp').value     = '0.01';
+    document.getElementById('ep_cal').value = '2';
+    document.getElementById('rx').value     = '0.0625';
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+sensorData = JSON.parse(JSON.stringify(datosIniciales));
+renderSensores();
+
+// Iniciar con GitHub si ya hay config guardada
+(function() {
+  // Si viene con ?orden=XXX en la URL (abierto desde el dashboard), setear el campo
+  // antes de cargarDB() para que levante ese archivo específico.
+  var qs = new URLSearchParams(window.location.search);
+  var ordenParam = qs.get('orden');
+  if (ordenParam !== null) {
+    var el = document.getElementById('orden');
+    if (el) el.value = ordenParam;
+  }
+
+  if (cargarConfig()) {
+    cargarDB();
+  } else {
+    setSyncStatus('busy', 'Sin conexión — ingresá token en ⚙ Config');
+  }
+})();
+
+// Auto-guardar al cambiar campos del formulario
+document.querySelectorAll('input.campo, select.campo').forEach(function(el) {
+  el.addEventListener('change', saveDB);
+});
+</script>
+</body>
+</html>

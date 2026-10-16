@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MONDIS — Órdenes de Mantenimiento</title>
+<style>
+  :root {
+    --bg:          #f5f5f5;
+    --surface:     #ffffff;
+    --primary:     #000080;    /* azul navy, mismo que el editor */
+    --primary-mid: #1a3a5c;
+    --accent:      #ccffcc;    /* verde pastel */
+    --cyan:        #ccffff;
+    --gray:        #c0c0c0;
+    --neutral-600: #555;
+    --neutral-400: #999;
+    --border:      #000;
+    --danger:      #c0392b;
+    --success:     #1a7a3c;
+    --font: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: #000;
+    min-height: 100vh;
+    font-size: 13px;
+  }
+
+  /* ── Toolbar superior ── */
+  #toolbar {
+    position: sticky; top:0; z-index:50;
+    background: var(--primary-mid);
+    color:#fff;
+    display:flex; align-items:center; gap:10px;
+    padding: 10px 20px;
+    border-bottom: 2px solid var(--border);
+    flex-wrap: wrap;
+  }
+  #toolbar h1 {
+    font-size: 16px; font-weight:700; letter-spacing:.3px;
+    margin-right:auto;
+  }
+  #toolbar h1 small {
+    display:block; font-size:10.5px; font-weight:400; opacity:.75;
+    letter-spacing:.4px;
+  }
+  .tb-btn {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:8px 14px;
+    border:1px solid rgba(255,255,255,.3);
+    background:rgba(255,255,255,.1);
+    color:#fff; font-family:var(--font); font-size:12px; font-weight:500;
+    cursor:pointer; border-radius:4px;
+    text-decoration:none;
+  }
+  .tb-btn:hover { background: rgba(255,255,255,.22); }
+  .tb-btn.primary { background:#217346; border-color:#217346; }
+  .tb-btn.primary:hover { background:#1a5c38; }
+
+  /* ── Panel configuración GitHub ── */
+  #cfgPanel {
+    background:#154360;
+    padding: 10px 20px;
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    border-bottom: 1px solid var(--border);
+  }
+  #cfgPanel label  { color:#aed6f1; font-size:11px; }
+  #cfgPanel input  {
+    padding:6px 10px; border:none; border-radius:3px;
+    font-size:12px; font-family:var(--font);
+  }
+  #cfgPanel input#cfgToken { width: 240px; letter-spacing:2px; }
+  #cfgPanel input#cfgRepo  { width: 220px; }
+  #cfgPanel button {
+    padding:6px 16px; background:#2471a3; color:#fff;
+    border:none; border-radius:3px; font-size:12px; cursor:pointer;
+  }
+  #cfgPanel button:hover { background:#1b5a86; }
+  #cfgPanel .status {
+    margin-left:auto; color:#aed6f1; font-size:11.5px;
+  }
+
+  /* ── Contenido principal ── */
+  main {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .section-head {
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; margin-bottom:14px; flex-wrap:wrap;
+  }
+  .section-head h2 {
+    font-size: 15px; color: var(--primary);
+    border-left: 4px solid var(--primary); padding-left:10px;
+  }
+  .section-head .controls {
+    display:flex; gap:8px; align-items:center;
+  }
+  .section-head input.filter {
+    padding:7px 12px; border:1px solid var(--gray);
+    font-family:var(--font); font-size:12px; min-width:220px;
+    outline:none; background:#fff;
+  }
+  .section-head input.filter:focus { border-color: var(--primary); }
+
+  .btn-primary {
+    padding:8px 16px; background: var(--primary); color:#fff;
+    border:none; cursor:pointer; font-family:var(--font); font-size:12px;
+    font-weight:600; letter-spacing:.3px;
+  }
+  .btn-primary:hover { background: var(--primary-mid); }
+  .btn-sec {
+    padding:7px 14px; background:#fff; color:#000;
+    border:1px solid var(--gray); cursor:pointer;
+    font-family:var(--font); font-size:12px;
+  }
+  .btn-sec:hover { background: var(--cyan); border-color: var(--primary); }
+
+  /* ── Grid de órdenes ── */
+  #ordenesGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .orden-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 14px;
+    display:flex; flex-direction:column; gap:8px;
+    transition: box-shadow .15s, transform .15s;
+    cursor: pointer;
+  }
+  .orden-card:hover {
+    box-shadow: 0 4px 14px rgba(0,0,0,.15);
+    transform: translateY(-2px);
+  }
+  .orden-card .ord-num {
+    font-size: 18px; font-weight:700;
+    color: var(--primary);
+    letter-spacing:.3px;
+  }
+  .orden-card .ord-sub {
+    font-size: 11.5px; color: var(--neutral-600);
+    display:flex; flex-direction:column; gap:3px;
+  }
+  .orden-card .ord-meta {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:8px; padding-top:8px;
+    border-top: 1px dashed var(--gray);
+    font-size: 11px; color: var(--neutral-400);
+  }
+  .orden-card .ord-actions {
+    display:flex; gap:6px; margin-top:4px;
+  }
+  .orden-card .ord-actions button {
+    flex:1; padding:6px 8px; font-size:11px; cursor:pointer;
+    border:1px solid var(--gray); background:#fff;
+    font-family:var(--font);
+  }
+  .orden-card .ord-actions .act-open {
+    background: var(--primary); color:#fff; border-color: var(--primary);
+    font-weight:600;
+  }
+  .orden-card .ord-actions .act-open:hover { background: var(--primary-mid); }
+  .orden-card .ord-actions .act-del:hover {
+    background: #ffcccc; color: var(--danger); border-color: var(--danger);
+  }
+  .orden-card.borrador {
+    border-style:dashed; background: #fffbea;
+  }
+  .orden-card.borrador .ord-num::before { content:'📝 '; }
+
+  .status-badge {
+    display:inline-block; padding:2px 8px; font-size:10.5px;
+    font-weight:600; border:1px solid var(--border);
+  }
+  .status-badge.ok  { background: var(--accent); color: #000; }
+  .status-badge.pend{ background: var(--cyan);   color: #000; }
+
+  /* ── Loader / vacío ── */
+  #loader, #empty {
+    text-align:center; padding:60px 20px; color: var(--neutral-400);
+    font-size:13px; grid-column: 1 / -1;
+  }
+  #loader svg { animation: spin 1s linear infinite; margin-bottom:10px; }
+  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  #empty strong { display:block; color:var(--neutral-600); margin-bottom:6px; font-size:14px; }
+
+  /* ── Toast ── */
+  #toast {
+    position:fixed; bottom:24px; right:24px; z-index:999;
+    padding:10px 18px; border-radius:4px; color:#fff;
+    font-size:12.5px; box-shadow:0 4px 12px rgba(0,0,0,.3);
+    display:none;
+  }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <h1>MONDIS <small>Órdenes de Mantenimiento Preventivo · IC-CTE-F421</small></h1>
+  <button class="tb-btn" onclick="toggleCfg()">⚙ Config</button>
+</div>
+
+<div id="cfgPanel">
+  <label>Token GitHub:</label>
+  <input type="password" id="cfgToken" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+  <label>Repo (usuario/repo):</label>
+  <input type="text" id="cfgRepo" placeholder="swisss33sss-max/MONDIS" value="swisss33sss-max/MONDIS">
+  <button onclick="guardarConfig()">✔ Conectar</button>
+  <span class="status" id="cfgStatus">—</span>
+</div>
+
+<main>
+  <div class="section-head">
+    <h2>Órdenes almacenadas</h2>
+    <div class="controls">
+      <input type="text" class="filter" id="filterInput" placeholder="Filtrar por número..." oninput="renderOrdenes()">
+      <button class="btn-sec" onclick="refrescarOrdenes()" title="Recargar lista">↻ Actualizar</button>
+      <button class="btn-primary" onclick="nuevaOrden()" title="Crear una orden nueva en el editor">+ Nueva orden</button>
+    </div>
+  </div>
+
+  <div id="ordenesGrid">
+    <div id="loader">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+      </svg>
+      <div>Conectate con tu token GitHub para listar las órdenes.</div>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+var REPO   = '';
+var TOKEN  = '';
+var BRANCH = 'main';
+var CFG_KEY = 'gh_mondis_cfg_v1'; // mismo key que el editor → credenciales compartidas
+var ordenesData = [];            // array de { name, size, sha, meta, path }
+
+// Estado del panel de config
+function toggleCfg() {
+  var p = document.getElementById('cfgPanel');
+  p.style.display = p.style.display === 'none' ? '' : 'none';
+}
+
+function apiHeaders() {
+  return {
+    'Authorization': 'token ' + TOKEN,
+    'Accept': 'application/vnd.github.v3+json'
+  };
+}
+
+function cargarConfig() {
+  var raw = localStorage.getItem(CFG_KEY);
+  if (!raw) return false;
+  try {
+    var cfg = JSON.parse(raw);
+    TOKEN = cfg.token || '';
+    REPO  = cfg.repo  || '';
+    document.getElementById('cfgToken').value = TOKEN;
+    document.getElementById('cfgRepo').value  = REPO;
+    return !!(TOKEN && REPO);
+  } catch (_) { return false; }
+}
+
+function guardarConfig() {
+  TOKEN = document.getElementById('cfgToken').value.trim();
+  REPO  = document.getElementById('cfgRepo').value.trim();
+  if (!TOKEN || !REPO) { toast('Ingresá token y repo', true); return; }
+  localStorage.setItem(CFG_KEY, JSON.stringify({ token: TOKEN, repo: REPO }));
+  setStatus('Conectando...');
+  refrescarOrdenes();
+}
+
+function setStatus(msg) {
+  document.getElementById('cfgStatus').textContent = msg;
+}
+
+function toast(msg, esError) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = esError ? '#c0392b' : '#1a7a3c';
+  t.style.display = 'block';
+  setTimeout(function(){ t.style.display = 'none'; }, 3500);
+}
+
+function hora() {
+  var d = new Date();
+  return d.toLocaleDateString('es-AR') + ' ' + d.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+}
+
+// ── Listar y renderizar órdenes ─────────────────────────────────────────────
+function refrescarOrdenes() {
+  if (!TOKEN || !REPO) {
+    document.getElementById('ordenesGrid').innerHTML =
+      '<div id="loader">Conectate con tu token GitHub para listar las órdenes.</div>';
+    return;
+  }
+  setStatus('Listando...');
+  var grid = document.getElementById('ordenesGrid');
+  grid.innerHTML = '<div id="loader">' +
+    '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>' +
+    '<div>Cargando órdenes del repo...</div></div>';
+
+  var url = 'https://api.github.com/repos/' + REPO + '/contents/?ref=' + BRANCH + '&t=' + Date.now();
+  fetch(url, { headers: apiHeaders() })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(items) {
+      // Filtrar OrdenM_*.json y SIN_ORDEN.json
+      ordenesData = (items || [])
+        .filter(function(it) {
+          return it.type === 'file' && /^(OrdenM_|SIN_ORDEN)/.test(it.name) && it.name.endsWith('.json');
+        })
+        .map(function(it) {
+          return {
+            name:  it.name,
+            path:  it.path,
+            size:  it.size,
+            sha:   it.sha,
+            html_url: it.html_url,
+            meta: null,     // se completa en lazy-load
+          };
+        })
+        .sort(function(a, b) {
+          // SIN_ORDEN al final, el resto ordenado por nombre descendente (más reciente primero visualmente)
+          if (a.name === 'SIN_ORDEN.json') return 1;
+          if (b.name === 'SIN_ORDEN.json') return -1;
+          return a.name.localeCompare(b.name);
+        });
+
+      setStatus('✓ ' + ordenesData.length + ' órdenes · ' + hora());
+      renderOrdenes();
+
+      // Lazy-load del contenido de cada JSON para mostrar meta (equipo, fecha, estado)
+      lazyLoadMetas();
+    })
+    .catch(function(e) {
+      setStatus('Error: ' + e.message);
+      toast('Error al listar: ' + e.message, true);
+      document.getElementById('ordenesGrid').innerHTML =
+        '<div id="empty"><strong>No pude listar las órdenes</strong>' + e.message + '</div>';
+    });
+}
+
+function renderOrdenes() {
+  var grid = document.getElementById('ordenesGrid');
+  var filtro = (document.getElementById('filterInput').value || '').toLowerCase().trim();
+
+  var filtradas = ordenesData.filter(function(o) {
+    if (!filtro) return true;
+    return o.name.toLowerCase().indexOf(filtro) !== -1 ||
+           (o.meta && (
+              (o.meta.equipo    || '').toLowerCase().indexOf(filtro) !== -1 ||
+              (o.meta.realizo   || '').toLowerCase().indexOf(filtro) !== -1 ||
+              (o.meta.sector    || '').toLowerCase().indexOf(filtro) !== -1 ||
+              (o.meta.ubicacion || '').toLowerCase().indexOf(filtro) !== -1
+           ));
+  });
+
+  if (filtradas.length === 0) {
+    grid.innerHTML = '<div id="empty"><strong>Sin resultados</strong>' +
+      (filtro ? 'Ninguna orden coincide con "' + filtro + '".' : 'No hay órdenes almacenadas todavía.') +
+      '</div>';
+    return;
+  }
+
+  grid.innerHTML = filtradas.map(function(o) {
+    var isBorrador = o.name === 'SIN_ORDEN.json';
+    var numero = isBorrador ? 'Borrador' : o.name.replace(/^OrdenM_/, '').replace(/\.json$/, '');
+    var meta = o.meta || {};
+    var equipo    = meta.equipo    || '—';
+    var sector    = meta.sector    || '';
+    var ubicacion = meta.ubicacion || '';
+    var realizo   = meta.realizo   || '';
+    var fecha     = meta.fecha     || '';
+    var estado    = meta.estado    || null;
+
+    return '<div class="orden-card ' + (isBorrador ? 'borrador' : '') + '"' +
+           ' ondblclick="abrirOrden(\'' + o.name + '\')">' +
+      '<div class="ord-num">' + (isBorrador ? numero : 'Orden M ' + numero) + '</div>' +
+      '<div class="ord-sub">' +
+        '<span><b>Equipo:</b> ' + equipo + '</span>' +
+        (sector    ? '<span><b>Sector:</b> ' + sector + '</span>' : '') +
+        (ubicacion ? '<span><b>Ubicación:</b> ' + ubicacion + '</span>' : '') +
+      '</div>' +
+      '<div class="ord-meta">' +
+        '<span>' + (fecha || '') + (realizo ? ' · ' + realizo : '') + '</span>' +
+        (estado ? '<span class="status-badge ' + (estado === 'Apto' ? 'ok' : 'pend') + '">' + estado + '</span>' : '') +
+      '</div>' +
+      '<div class="ord-actions">' +
+        '<button class="act-open" onclick="event.stopPropagation();abrirOrden(\'' + o.name + '\')">Abrir en editor</button>' +
+        '<button class="act-del"  onclick="event.stopPropagation();borrarOrden(\'' + o.name + '\',\'' + o.sha + '\')" title="Borrar del repo">🗑</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// Lazy-load del contenido de cada JSON para enriquecer la info visible.
+// Lo hacemos en lotes pequeños para no saturar la API de GitHub.
+function lazyLoadMetas() {
+  var pending = ordenesData.filter(function(o) { return !o.meta; });
+  if (pending.length === 0) return;
+
+  var batchSize = 4;
+  var idx = 0;
+
+  function siguiente() {
+    if (idx >= pending.length) return;
+    var batch = pending.slice(idx, idx + batchSize);
+    idx += batchSize;
+
+    Promise.all(batch.map(function(o) {
+      var url = 'https://api.github.com/repos/' + REPO + '/contents/' + encodeURIComponent(o.path) + '?ref=' + BRANCH;
+      return fetch(url, { headers: apiHeaders() })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          if (!data || !data.content) return;
+          try {
+            var raw = atob(data.content.replace(/\n/g, ''));
+            var bytes = new Uint8Array(raw.length);
+            for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+            var json = JSON.parse(new TextDecoder('utf-8').decode(bytes));
+            var c = json.cabecera || {};
+            var v = json.valoracion || {};
+            var estado = v.val1 === 'P' ? 'Apto' :
+                         v.val2 === 'P' ? 'Reparado' :
+                         v.val3 === 'P' ? 'No apto' : null;
+            o.meta = {
+              equipo:    c.equipo,
+              modelo:    c.modelo,
+              sector:    c.sector,
+              ubicacion: c.ubicacion,
+              realizo:   c.realizo,
+              fecha:     c.fecha,
+              estado:    estado,
+            };
+          } catch (_) { o.meta = {}; }
+        })
+        .catch(function() { o.meta = {}; });
+    })).then(function() {
+      renderOrdenes();
+      setTimeout(siguiente, 150);
+    });
+  }
+  siguiente();
+}
+
+// ── Acciones ────────────────────────────────────────────────────────────────
+function abrirOrden(filename) {
+  // Extraer el número de orden desde el nombre del archivo
+  var ordenNum = '';
+  var m = filename.match(/^OrdenM_(.+)\.json$/);
+  if (m) ordenNum = m[1];
+  var url = 'mondis_editor.html?orden=' + encodeURIComponent(ordenNum);
+  window.open(url, '_blank');
+}
+
+function nuevaOrden() {
+  // Abrir editor sin query → el editor carga SIN_ORDEN hasta que se complete
+  window.open('mondis_editor.html?orden=', '_blank');
+}
+
+function borrarOrden(filename, sha) {
+  if (!confirm('¿Borrar del repo "' + filename + '"? Esta acción es irreversible.')) return;
+  setStatus('Borrando ' + filename + '...');
+  fetch('https://api.github.com/repos/' + REPO + '/contents/' + encodeURIComponent(filename), {
+    method: 'DELETE',
+    headers: Object.assign({}, apiHeaders(), { 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ message: 'delete ' + filename, sha: sha, branch: BRANCH }),
+  })
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(e){ throw new Error(e.message); });
+      toast('Orden borrada: ' + filename, false);
+      refrescarOrdenes();
+    })
+    .catch(function(e) {
+      toast('Error al borrar: ' + e.message, true);
+    });
+}
+
+// ── Startup ─────────────────────────────────────────────────────────────────
+(function init() {
+  if (cargarConfig()) {
+    document.getElementById('cfgPanel').style.display = 'none';
+    refrescarOrdenes();
+  } else {
+    setStatus('Ingresá tu token y presioná Conectar');
+  }
+})();
+</script>
+</body>
+</html>
