@@ -517,6 +517,23 @@
         19.4
       ],
       "obs": ""
+    },
+    {
+      "ub": "Sensor Mondis",
+      "sensor": "",
+      "loc": "Nuevo equipo",
+      "piso": "Piso 1",
+      "sm": [
+        null,
+        null,
+        null
+      ],
+      "pm": [
+        null,
+        null,
+        null
+      ],
+      "obs": ""
     }
   ]
 }
